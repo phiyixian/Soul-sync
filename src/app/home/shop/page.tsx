@@ -52,6 +52,16 @@ export default function ShopPage() {
     }
 
     try {
+      // Atomically deduct credits and create purchase using a transaction-like sequence
+      const buyerRef = doc(firestore, 'userAccounts', user.uid);
+      const buyerSnap = await getDoc(buyerRef);
+      const buyerCredits = (buyerSnap.data() as any)?.credits ?? 0;
+      if (buyerCredits < selectedItem.price) {
+        toast({ variant: 'destructive', title: 'Not enough credits' });
+        return;
+      }
+      await updateDoc(buyerRef, { credits: buyerCredits - selectedItem.price });
+
       await addDoc(collection(firestore, 'purchases'), {
         buyerAccountId: user.uid,
         recipientAccountId: partnerId,

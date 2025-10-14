@@ -73,6 +73,7 @@ export default function RegisterPage() {
           emailLower,
           dateJoined: new Date().toISOString(),
           partnerAccountId: null,
+          credits: 500,
           profile: { gender: myGender, partnerPreference: partnerGender },
         };
         const userDocRef = doc(firestore, 'userAccounts', user.uid);

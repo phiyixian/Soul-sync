@@ -8,7 +8,7 @@ import {
   where,
   writeBatch,
 } from 'firebase/firestore';
-import { useCollection, useFirebase, useUser } from '@/firebase';
+import { useCollection, useDoc, useFirebase, useUser } from '@/firebase';
 import { Button } from './ui/button';
 import {
   Card,
@@ -26,14 +26,22 @@ export function PartnerRequestNotification() {
   const { firestore } = useFirebase();
   const { toast } = useToast();
 
+  // Load current user's account to check if already linked
+  const userAccountRef = useMemoFirebase(
+    () => (user ? doc(firestore, 'userAccounts', user.uid) : null),
+    [user, firestore]
+  );
+  const { data: userAccount } = useDoc(userAccountRef);
+
   const partnerRequestsQuery = useMemoFirebase(() => {
     if (!user) return null;
+    if (userAccount?.partnerAccountId) return null; // already linked; suppress invite banner
     return query(
       collection(firestore, 'partnerRequests'),
       where('requestedAccountId', '==', user.uid),
       where('status', '==', 'pending')
     );
-  }, [firestore, user]);
+  }, [firestore, user, userAccount?.partnerAccountId]);
 
   const { data: requests, isLoading } = useCollection(partnerRequestsQuery);
 
@@ -47,19 +55,28 @@ export function PartnerRequestNotification() {
       const requestRef = doc(firestore, 'partnerRequests', request.id);
       batch.update(requestRef, { status: 'accepted' });
 
-      // 2. Update the current user's partnerAccountId
+      // 2. Denormalize usernames on both user accounts and set partner ids
       const currentUserRef = doc(firestore, 'userAccounts', user.uid);
-      batch.update(currentUserRef, {
-        partnerAccountId: request.requestingAccountId,
-      });
-
-      // 3. Update the requesting user's partnerAccountId
       const requestingUserRef = doc(
         firestore,
         'userAccounts',
         request.requestingAccountId
       );
-      batch.update(requestingUserRef, { partnerAccountId: user.uid });
+      const [currentSnap, requestingSnap] = await Promise.all([
+        getDoc(currentUserRef),
+        getDoc(requestingUserRef),
+      ]);
+      const currentUsername = currentSnap.exists() ? (currentSnap.data() as any).username : null;
+      const requestingUsername = requestingSnap.exists() ? (requestingSnap.data() as any).username : null;
+
+      batch.update(currentUserRef, {
+        partnerAccountId: request.requestingAccountId,
+        partnerUsername: requestingUsername || null,
+      });
+      batch.update(requestingUserRef, {
+        partnerAccountId: user.uid,
+        partnerUsername: currentUsername || null,
+      });
 
       await batch.commit();
 
@@ -94,7 +111,7 @@ export function PartnerRequestNotification() {
     }
   };
 
-  if (isLoading || !requests || requests.length === 0) {
+  if (isLoading || userAccount?.partnerAccountId || !requests || requests.length === 0) {
     return null;
   }
 

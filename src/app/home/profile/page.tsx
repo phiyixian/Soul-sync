@@ -13,7 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { User, Heart, Edit, LogOut } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { useAuth, useDoc, useFirebase, useUser } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { doc, writeBatch } from 'firebase/firestore';
 import { useState } from 'react';
 import { LinkPartnerDialog } from '@/components/LinkPartnerDialog';
 import { useMemoFirebase } from '@/firebase/provider';
@@ -41,6 +41,16 @@ export default function ProfilePage() {
 
   const handleLogout = () => {
     auth.signOut();
+  };
+
+  const handleUnlink = async () => {
+    if (!user || !firestore || !userAccount?.partnerAccountId) return;
+    const batch = writeBatch(firestore);
+    const meRef = doc(firestore, 'userAccounts', user.uid);
+    const partnerRef = doc(firestore, 'userAccounts', userAccount.partnerAccountId);
+    batch.update(meRef, { partnerAccountId: null, partnerUsername: null });
+    batch.update(partnerRef, { partnerAccountId: null, partnerUsername: null });
+    await batch.commit();
   };
 
   return (
@@ -94,6 +104,9 @@ export default function ProfilePage() {
             <Heart className="h-5 w-5" />
             {userAccount?.partnerAccountId ? 'Linked!' : 'Link with Partner'}
           </Button>
+          {userAccount?.partnerAccountId && (
+            <Button variant="destructive" className="w-full" onClick={handleUnlink}>Unlink Partner</Button>
+          )}
           <Separator className="my-2" />
           <Button
             variant="ghost"

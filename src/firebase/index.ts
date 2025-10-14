@@ -3,7 +3,7 @@
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, doc, setDoc } from 'firebase/firestore';
 
 // IMPORTANT: DO NOT MODIFY THIS FUNCTION
 export function initializeFirebase() {
@@ -41,6 +41,18 @@ export function getSdks(firebaseApp: FirebaseApp) {
     auth: getAuth(firebaseApp),
     firestore: getFirestore(firebaseApp),
   };
+}
+
+export async function seedAvatarAssets(firestore: ReturnType<typeof getFirestore>, assets: Array<{id: string; type: 'hair'|'eyes'|'clothes'|'body'; url: string; name: string;}>) {
+  for (const a of assets) {
+    await setDoc(doc(firestore, 'avatarAssets', a.id), { type: a.type, name: a.name, imageUrl: a.url });
+  }
+}
+
+export async function seedShopItems(firestore: ReturnType<typeof getFirestore>, items: Array<{id: string; name: string; price: number; imageUrl: string;}>) {
+  for (const i of items) {
+    await setDoc(doc(firestore, 'shopItems', i.id), { name: i.name, price: i.price, imageUrl: i.imageUrl });
+  }
 }
 
 export * from './provider';
