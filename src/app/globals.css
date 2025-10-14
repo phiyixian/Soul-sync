@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Cute rounded theme tweaks */
+.pixelated { image-rendering: pixelated; }
+.btn-rounded { @apply rounded-2xl; }
+/* Heart float animation used on welcome */
+@keyframes heartFloat { 0% { transform: translateY(0); opacity: .8 } 100% { transform: translateY(-12px); opacity: 0.9 } }
+.animate-heart-float { animation: heartFloat 1.2s ease-in-out infinite alternate; }
+
 body {
   font-family: Arial, Helvetica, sans-serif;
 }

@@ -165,8 +165,9 @@
    * @principle Enforces document ownership for writes and read access for buyer/recipient.
    */
   match /purchases/{purchaseId} {
-  allow get: if isSignedIn() && (resource.data.buyerAccountId == request.auth.uid || resource.data.recipientAccountId == request.auth.uid);
-  allow list: if false;
+ allow get: if isSignedIn() && (resource.data.buyerAccountId == request.auth.uid || resource.data.recipientAccountId == request.auth.uid);
+ // Allow queries, but only return docs where requester is buyer or recipient
+ allow list: if isSignedIn() && (resource.data.buyerAccountId == request.auth.uid || resource.data.recipientAccountId == request.auth.uid);
   allow create: if isSignedIn() && request.resource.data.buyerAccountId == request.auth.uid;
   allow update: if false;
   allow delete: if isSignedIn() && isExistingOwner(resource.data.buyerAccountId);
@@ -210,13 +211,21 @@
    *  @deny (delete) - User with ID 'user456' cannot delete the partner request of user 'user123'.
    * @principle Enforces document ownership for writes.
    */
-  match /partnerRequests/{partnerRequestId} {
-  allow get: if true;
-  allow list: if false;
-  allow create: if isSignedIn() && request.resource.data.requestingAccountId == request.auth.uid;
-  allow update: if isSignedIn() && isExistingOwner(resource.data.requestingAccountId);
-  allow delete: if isSignedIn() && isExistingOwner(resource.data.requestingAccountId);
-  }
+ match /partnerRequests/{partnerRequestId} {
+ allow get: if isSignedIn();
+ // Allow listing (queries) but only return docs where the requester is involved
+ allow list: if isSignedIn() && (
+   resource.data.requestedAccountId == request.auth.uid ||
+   resource.data.requestingAccountId == request.auth.uid
+ );
+ allow create: if isSignedIn() && request.resource.data.requestingAccountId == request.auth.uid;
+    // Allow update by either participant (requesting or requested account)
+    allow update: if isSignedIn() && (
+      resource.data.requestingAccountId == request.auth.uid ||
+      resource.data.requestedAccountId == request.auth.uid
+    );
+ allow delete: if isSignedIn() && isExistingOwner(resource.data.requestingAccountId);
+ }
  
 
   /**
@@ -260,6 +269,25 @@
   allow delete: if isSignedIn() && isExistingOwner(userAccountId) && request.resource.data.userAccountId == userAccountId;
   }
 
+  /**
+   * @description Username and email lookup maps for partner search.
+   * Readable by signed-in users; writes only by the owner when creating profile.
+   */
+  match /usernames/{usernameLower} {
+   allow get: if isSignedIn();
+   allow list: if false;
+   // Only allow creation if the mapping points to the requester
+   allow create: if isSignedIn() && request.resource.data.userAccountId == request.auth.uid;
+   allow update: if false;
+   allow delete: if false;
+  }
+  match /emails/{emailLower} {
+   allow get: if isSignedIn();
+   allow list: if false;
+   allow create: if isSignedIn() && request.resource.data.userAccountId == request.auth.uid;
+   allow update: if false;
+   allow delete: if false;
+  }
  // Room inventory items under a user
  match /users/{userAccountId}/roomInventory/{itemId} {
   allow get: if isSignedIn() && (isOwner(userAccountId) || isPartner(userAccountId));

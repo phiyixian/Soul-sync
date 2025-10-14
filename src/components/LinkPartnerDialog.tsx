@@ -20,6 +20,8 @@ import {
   getDocs,
   addDoc,
   serverTimestamp,
+  doc,
+  getDoc,
 } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
@@ -43,12 +45,11 @@ export function LinkPartnerDialog({
 
     setIsLoading(true);
     try {
-      // 1. Find partner by username
-      const usersRef = collection(firestore, 'userAccounts');
-      const q = query(usersRef, where('username', '==', partnerUsername));
-      const querySnapshot = await getDocs(q);
-
-      if (querySnapshot.empty) {
+      // 1. Find partner by username via lookup (case-insensitive)
+      const usernameLower = partnerUsername.trim().toLowerCase();
+      const lookupRef = doc(firestore, 'usernames', usernameLower);
+      const lookupSnap = await getDoc(lookupRef);
+      if (!lookupSnap.exists()) {
         toast({
           variant: 'destructive',
           title: 'User not found',
@@ -56,10 +57,14 @@ export function LinkPartnerDialog({
         });
         return;
       }
-
-      const partnerDoc = querySnapshot.docs[0];
-      const partnerId = partnerDoc.id;
-      const partnerData: any = partnerDoc.data();
+      const partnerId = (lookupSnap.data() as any).userAccountId as string;
+      const partnerDocRef = doc(firestore, 'userAccounts', partnerId);
+      const partnerDocSnap = await getDoc(partnerDocRef);
+      if (!partnerDocSnap.exists()) {
+        toast({ variant: 'destructive', title: 'User not found' });
+        return;
+      }
+      const partnerData: any = partnerDocSnap.data();
 
       if (partnerId === user.uid) {
         toast({
@@ -72,8 +77,8 @@ export function LinkPartnerDialog({
 
       // 2. Prevent linking if either user is already linked
       const currentUserRef = doc(firestore, 'userAccounts', user.uid);
-      const currentUserSnap = await getDocs(query(collection(firestore, 'userAccounts'), where('id', '==', user.uid)));
-      const currentUserLinked = currentUserSnap.empty ? false : Boolean(currentUserSnap.docs[0].data().partnerAccountId);
+      const currentUserSnap = await getDoc(currentUserRef);
+      const currentUserLinked = currentUserSnap.exists() ? Boolean((currentUserSnap.data() as any).partnerAccountId) : false;
       const partnerAlreadyLinked = Boolean(partnerData?.partnerAccountId);
 
       if (currentUserLinked || partnerAlreadyLinked) {

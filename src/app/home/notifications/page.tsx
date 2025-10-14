@@ -12,12 +12,13 @@ import {
 } from '@/components/ui/card';
 import { Bell, Gift, Heart } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { useMemoFirebase } from '@/firebase/provider';
 
 export default function NotificationsPage() {
   const { user } = useUser();
   const { firestore } = useFirebase();
 
-  const notificationsQuery = useMemo(() => {
+  const notificationsQuery = useMemoFirebase(() => {
     if (!user) return null;
     return query(
       collection(firestore, `users/${user.uid}/notifications`),

@@ -16,10 +16,10 @@ import { useState } from 'react';
 import { useAuth, useFirestore } from '@/firebase';
 import { initiateEmailSignUp } from '@/firebase/non-blocking-login';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { doc, getDocs, query, where, collection } from 'firebase/firestore';
+import { doc, getDocs, query, where, collection, setDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, deleteUser } from 'firebase/auth';
 
 export default function RegisterPage() {
   const [username, setUsername] = useState('');
@@ -36,21 +36,6 @@ export default function RegisterPage() {
     e.preventDefault();
     if (!auth || !firestore) return;
 
-    // Check if username already exists
-    const usernameQuery = query(
-      collection(firestore, 'userAccounts'),
-      where('username', '==', username)
-    );
-    const usernameSnapshot = await getDocs(usernameQuery);
-    if (!usernameSnapshot.empty) {
-      toast({
-        variant: 'destructive',
-        title: 'Username taken',
-        description: 'Please choose a different username.',
-      });
-      return;
-    }
-
     try {
       const userCredential = await createUserWithEmailAndPassword(
         auth,
@@ -60,16 +45,44 @@ export default function RegisterPage() {
       const user = userCredential.user;
 
       if (user) {
+        // Now that user is authenticated, perform username uniqueness check
+        const usernameQuery = query(
+          collection(firestore, 'userAccounts'),
+          where('username', '==', username)
+        );
+        const usernameSnapshot = await getDocs(usernameQuery);
+        if (!usernameSnapshot.empty) {
+          // Optionally roll back the just-created auth user for stricter UX
+          try { await deleteUser(user); } catch {}
+          toast({
+            variant: 'destructive',
+            title: 'Username taken',
+            description: 'Please choose a different username.',
+          });
+          return;
+        }
+
+        const usernameLower = username.trim().toLowerCase();
+        const emailLower = (user.email || '').toLowerCase();
+
         const userAccountData = {
           id: user.uid,
           username,
+          usernameLower,
           email: user.email,
+          emailLower,
           dateJoined: new Date().toISOString(),
           partnerAccountId: null,
           profile: { gender: myGender, partnerPreference: partnerGender },
         };
         const userDocRef = doc(firestore, 'userAccounts', user.uid);
         setDocumentNonBlocking(userDocRef, userAccountData, { merge: true });
+
+        // Create lookup docs for fast, secure partner search
+        await Promise.all([
+          setDoc(doc(firestore, 'usernames', usernameLower), { userAccountId: user.uid, username }),
+          emailLower ? setDoc(doc(firestore, 'emails', emailLower), { userAccountId: user.uid, email: user.email }) : Promise.resolve(),
+        ]);
         router.push('/home/avatar-editor');
       }
     } catch (error: any) {

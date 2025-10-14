@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { useCollection, useFirebase, useUser } from '@/firebase';
 import { useMemo } from 'react';
 import { collection, query, where } from 'firebase/firestore';
+import { useMemoFirebase } from '@/firebase/provider';
 
 const navItems = [
   { href: '/home', icon: Home, label: 'Home' },
@@ -26,13 +27,13 @@ export function BottomNav() {
   const { user } = useUser();
   const { firestore } = useFirebase();
 
-  const notificationsQuery = useMemo(() => {
+  const notificationsQuery = useMemoFirebase(() => {
     if (!user) return null;
     return query(
       collection(firestore, `users/${user.uid}/notifications`),
       where('isRead', '==', false)
     );
-  }, [firestore, user]);
+  }, [firestore, user?.uid]);
 
   const { data: notifications } = useCollection(notificationsQuery);
 

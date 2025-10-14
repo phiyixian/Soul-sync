@@ -31,7 +31,7 @@ export default function MessagesPage() {
 
   const userAccountRef = useMemoFirebase(
     () => (user ? doc(firestore, 'userAccounts', user.uid) : null),
-    [user, firestore]
+    [user?.uid, firestore]
   );
   const { data: userAccount } = useDoc(userAccountRef);
   const partnerId = userAccount?.partnerAccountId;
@@ -43,7 +43,7 @@ export default function MessagesPage() {
       where('participantIds', 'array-contains', user.uid),
       orderBy('timestamp', 'asc')
     );
-  }, [firestore, user, partnerId]);
+  }, [firestore, user?.uid, partnerId]);
 
   const { data: messages } = useCollection(messagesQuery);
 
@@ -56,7 +56,7 @@ export default function MessagesPage() {
         (msg.senderAccountId === partnerId &&
           msg.recipientAccountId === user?.uid)
     );
-  }, [messages, user, partnerId]);
+  }, [messages, user?.uid, partnerId]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
