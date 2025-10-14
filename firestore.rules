@@ -295,10 +295,23 @@
   match /avatarAssets/{assetId} {
    allow get: if true;
    allow list: if true;
-   allow create: if false;
+   allow create: if isSignedIn();
    allow update: if false;
    allow delete: if false;
   }
+
+  /**
+   * @description Shop items available for purchase.
+   * Readable by all users; writes only by authenticated users for seeding.
+   */
+  match /shopItems/{itemId} {
+   allow get: if true;
+   allow list: if true;
+   allow create: if isSignedIn();
+   allow update: if false;
+   allow delete: if false;
+  }
+
   /**
    * @description Username and email lookup maps for partner search.
    * Readable by signed-in users; writes only by the owner when creating profile.
