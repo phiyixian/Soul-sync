@@ -1,0 +1,281 @@
+/**
+  * @file Firebase Security Rules for SoulSync App
+  * @description This ruleset enforces a user-centric security model for the SoulSync application,
+  * designed for long-distance relationship features like partner linking, messaging, gift-giving,
+  * and status updates.
+  *
+  * Data Structure:
+  * - User accounts are stored in the `/userAccounts/{userAccountId}` collection.
+  * - Avatars are stored in the `/avatars/{avatarId}` collection.
+  * - Messages are stored in the `/messages/{messageId}` collection.
+  * - Status updates are stored in the `/statusUpdates/{statusUpdateId}` collection.
+  * - Gifts are stored in the `/gifts/{giftId}` collection.
+  * - Purchases are stored in the `/purchases/{purchaseId}` collection.
+  * - Notifications are stored in the `/users/{userAccountId}/notifications/{notificationId}` collection,
+  *   nested under each user's document.
+  * - Partner requests are stored in the `/partnerRequests/{partnerRequestId}` collection.
+  * - Room items are stored in the `/roomItems/{roomItemId}` collection.
+  * - User rooms are stored in the `/users/{userAccountId}/rooms/{roomId}` collection, nested under each user's document.
+  *
+  * Key Security Decisions:
+  * - Strict user-ownership for user-specific data (avatars, notifications, rooms).
+  * - Public read access for gifts and room items.
+  * - Partner linking enforced via the `partnerAccountId` field in `userAccounts` and the `partnerRequests` collection.
+  * - Owner-only writes for user accounts, avatars, notifications and rooms.
+  * - No user listing is allowed.
+  *
+  * Denormalization for Authorization:
+  * - The `partnerAccountId` field is denormalized on the `UserAccount` document to enable fast partner checks.
+  */
+ 
+
+ rules_version = '2';
+ service cloud.firestore {
+  match /databases/{database}/documents {
+ 
+
+  /**
+   * @description Manages user account information.
+   * @path /userAccounts/{userAccountId}
+   * @allow (create) - User with ID 'user123' can create their own account with matching ID.
+   * @allow (get) - User with ID 'user123' can get their own account.
+   * @allow (update) - User with ID 'user123' can update their own account.
+   * @allow (delete) - User with ID 'user123' can delete their own account.
+   * @deny (create) - User with ID 'user456' cannot create an account with ID 'user123'.
+   * @deny (get) - User with ID 'user456' cannot get the account of user 'user123'.
+   * @deny (update) - User with ID 'user456' cannot update the account of user 'user123'.
+   * @deny (delete) - User with ID 'user456' cannot delete the account of user 'user123'.
+   * @principle Enforces document ownership for writes.
+   */
+  match /userAccounts/{userAccountId} {
+  allow get: if isSignedIn() && isOwner(userAccountId);
+  allow list: if false;
+  allow create: if isSignedIn() && isOwner(userAccountId) && request.resource.data.id == request.auth.uid;
+  allow update: if isSignedIn() && isExistingOwner(userAccountId) && request.resource.data.id == resource.data.id;
+  allow delete: if isSignedIn() && isExistingOwner(userAccountId);
+  }
+ 
+
+  /**
+   * @description Manages user avatar information.
+   * @path /avatars/{avatarId}
+   *  @allow (create) - User with ID 'user123' can create an avatar.
+   *  @allow (get) - Any user can read avatar information.
+   *  @allow (update) - User with ID 'user123' can update their avatar.
+   *  @allow (delete) - User with ID 'user123' can delete their avatar.
+   *  @deny (create) - User with ID 'user456' cannot create an avatar for 'user123'.
+   *  @deny (update) - User with ID 'user456' cannot update the avatar of user 'user123'.
+   *  @deny (delete) - User with ID 'user456' cannot delete the avatar of user 'user123'.
+   * @principle Enforces document ownership for writes.
+   */
+  match /avatars/{avatarId} {
+  allow get: if true;
+  allow list: if false;
+  allow create: if isSignedIn() && request.resource.data.userAccountId == request.auth.uid;
+  allow update: if isSignedIn() && isExistingOwner(resource.data.userAccountId);
+  allow delete: if isSignedIn() && isExistingOwner(resource.data.userAccountId);
+  }
+ 
+
+  /**
+   * @description Manages messages exchanged between partners.
+   * @path /messages/{messageId}
+   * @allow (create) - User with ID 'user123' can create a message to 'user456' if they are partners.
+   * @allow (get) - User with ID 'user123' can get a message if they are the sender or recipient.
+   * @allow (list) - Not allowed.
+   * @allow (update) - Not allowed.
+   * @allow (delete) - User with ID 'user123' can delete a message if they are the sender.
+   * @deny (create) - User with ID 'user123' cannot create a message to 'user789' if they are not partners.
+   * @deny (get) - User with ID 'user123' cannot get a message if they are not the sender or recipient.
+   * @deny (update) - User with ID 'user123' cannot update a message they sent.
+   * @deny (delete) - User with ID 'user123' cannot delete a message if they are not the sender.
+   * @principle Enforces partner-based access for messages.
+   */
+  match /messages/{messageId} {
+  allow get: if isSignedIn() && (resource.data.senderAccountId == request.auth.uid || resource.data.recipientAccountId == request.auth.uid);
+  allow list: if false;
+  allow create: if isSignedIn() && (
+  get(/databases/$(database)/documents/userAccounts/$(request.auth.uid)).data.partnerAccountId == request.resource.data.recipientAccountId
+  || get(/databases/$(database)/documents/userAccounts/$(request.resource.data.recipientAccountId)).data.partnerAccountId == request.auth.uid
+  );
+  allow update: if false;
+  allow delete: if isSignedIn() && isExistingOwner(resource.data.senderAccountId);
+  }
+ 
+
+  /**
+   * @description Manages user status updates.
+   * @path /statusUpdates/{statusUpdateId}
+   *  @allow (create) - User with ID 'user123' can create a status update.
+   *  @allow (get) - Any user can read the status update.
+   *  @allow (update) - User with ID 'user123' can update their status update.
+   *  @allow (delete) - User with ID 'user123' can delete their status update.
+   *  @deny (create) - User with ID 'user456' cannot create a status update for 'user123'.
+   *  @deny (update) - User with ID 'user456' cannot update the status update of user 'user123'.
+   *  @deny (delete) - User with ID 'user456' cannot delete the status update of user 'user123'.
+   * @principle Enforces document ownership for writes.
+   */
+  match /statusUpdates/{statusUpdateId} {
+  allow get: if true;
+  allow list: if false;
+  allow create: if isSignedIn() && request.resource.data.userAccountId == request.auth.uid;
+  allow update: if isSignedIn() && isExistingOwner(resource.data.userAccountId);
+  allow delete: if isSignedIn() && isExistingOwner(resource.data.userAccountId);
+  }
+ 
+
+  /**
+   * @description Manages gift information.
+   * @path /gifts/{giftId}
+   *  @allow (get) - Any user can read gift information.
+   *  @allow (list) - Any user can list gifts.
+   *  @deny (create) - No one can create gifts through client.
+   *  @deny (update) - No one can update gifts through client.
+   *  @deny (delete) - No one can delete gifts through client.
+   * @principle Gifts are read-only to the client.
+   */
+  match /gifts/{giftId} {
+  allow get: if true;
+  allow list: if true;
+  allow create: if false;
+  allow update: if false;
+  allow delete: if false;
+  }
+ 
+
+  /**
+   * @description Manages purchase information.
+   * @path /purchases/{purchaseId}
+   *  @allow (create) - User with ID 'user123' can create a purchase if they are the buyer.
+   *  @allow (get) - User with ID 'user123' can get a purchase if they are the buyer or recipient.
+   *  @allow (list) - Not allowed.
+   *  @allow (update) - Not allowed.
+   *  @allow (delete) - User with ID 'user123' can delete a purchase if they are the buyer.
+   *  @deny (create) - User with ID 'user456' cannot create a purchase for 'user123'.
+   *  @deny (get) - User with ID 'user123' cannot get a purchase if they are not the buyer or recipient.
+   *  @deny (update) - User with ID 'user123' cannot update a purchase they made.
+   *  @deny (delete) - User with ID 'user123' cannot delete a purchase if they are not the buyer.
+   * @principle Enforces document ownership for writes and read access for buyer/recipient.
+   */
+  match /purchases/{purchaseId} {
+  allow get: if isSignedIn() && (resource.data.buyerAccountId == request.auth.uid || resource.data.recipientAccountId == request.auth.uid);
+  allow list: if false;
+  allow create: if isSignedIn() && request.resource.data.buyerAccountId == request.auth.uid;
+  allow update: if false;
+  allow delete: if isSignedIn() && isExistingOwner(resource.data.buyerAccountId);
+  }
+ 
+
+  /**
+   * @description Manages notifications for a user.
+   * @path /users/{userAccountId}/notifications/{notificationId}
+   *  @allow (create) - User with ID 'user123' can create a notification for themselves.
+   *  @allow (get) - User with ID 'user123' can get their own notification.
+   *  @allow (list) - User with ID 'user123' can list their own notifications.
+   *  @allow (update) - User with ID 'user123' can update their own notification.
+   *  @allow (delete) - User with ID 'user123' can delete their own notification.
+   *  @deny (create) - User with ID 'user456' cannot create a notification for 'user123'.
+   *  @deny (get) - User with ID 'user456' cannot get the notification of user 'user123'.
+   *  @deny (list) - User with ID 'user456' cannot list the notifications of user 'user123'.
+   *  @deny (update) - User with ID 'user456' cannot update the notification of user 'user123'.
+   *  @deny (delete) - User with ID 'user456' cannot delete the notification of user 'user123'.
+   * @principle Restricts access to a user's own data tree.
+   */
+  match /users/{userAccountId}/notifications/{notificationId} {
+  allow get: if isSignedIn() && isOwner(userAccountId);
+  allow list: if isSignedIn() && isOwner(userAccountId);
+  allow create: if isSignedIn() && isOwner(userAccountId) && request.resource.data.userAccountId == userAccountId;
+  allow update: if isSignedIn() && isExistingOwner(userAccountId) && request.resource.data.userAccountId == userAccountId;
+  allow delete: if isSignedIn() && isExistingOwner(userAccountId) && request.resource.data.userAccountId == userAccountId;
+  }
+ 
+
+  /**
+   * @description Manages partner requests.
+   * @path /partnerRequests/{partnerRequestId}
+   *  @allow (create) - User with ID 'user123' can create a partner request.
+   *  @allow (get) - Any user can read partner request information.
+   *  @allow (list) - Not allowed.
+   *  @allow (update) - User with ID 'user123' can update a partner request if they are the requestor.
+   *  @allow (delete) - User with ID 'user123' can delete a partner request if they are the requestor.
+   *  @deny (create) - User with ID 'user456' cannot create a partner request for 'user123'.
+   *  @deny (update) - User with ID 'user456' cannot update the partner request of user 'user123'.
+   *  @deny (delete) - User with ID 'user456' cannot delete the partner request of user 'user123'.
+   * @principle Enforces document ownership for writes.
+   */
+  match /partnerRequests/{partnerRequestId} {
+  allow get: if true;
+  allow list: if false;
+  allow create: if isSignedIn() && request.resource.data.requestingAccountId == request.auth.uid;
+  allow update: if isSignedIn() && isExistingOwner(resource.data.requestingAccountId);
+  allow delete: if isSignedIn() && isExistingOwner(resource.data.requestingAccountId);
+  }
+ 
+
+  /**
+   * @description Manages purchasable room items.
+   * @path /roomItems/{roomItemId}
+   *  @allow (get) - Any user can read room item information.
+   *  @allow (list) - Any user can list room items.
+   *  @deny (create) - No one can create room items through client.
+   *  @deny (update) - No one can update room items through client.
+   *  @deny (delete) - No one can delete room items through client.
+   * @principle Room items are read-only to the client.
+   */
+  match /roomItems/{roomItemId} {
+  allow get: if true;
+  allow list: if true;
+  allow create: if false;
+  allow update: if false;
+  allow delete: if false;
+  }
+ 
+
+  /**
+   * @description Manages the room data for a user.
+   * @path /users/{userAccountId}/rooms/{roomId}
+   *  @allow (create) - User with ID 'user123' can create a room for themselves.
+   *  @allow (get) - User with ID 'user123' can get their own room.
+   *  @allow (list) - Not allowed.
+   *  @allow (update) - User with ID 'user123' can update their own room.
+   *  @allow (delete) - User with ID 'user123' can delete their own room.
+   *  @deny (create) - User with ID 'user456' cannot create a room for 'user123'.
+   *  @deny (get) - User with ID 'user456' cannot get the room of user 'user123'.
+   *  @deny (update) - User with ID 'user456' cannot update the room of user 'user123'.
+   *  @deny (delete) - User with ID 'user456' cannot delete the room of user 'user123'.
+   * @principle Restricts access to a user's own room.
+   */
+  match /users/{userAccountId}/rooms/{roomId} {
+  allow get: if isSignedIn() && isOwner(userAccountId);
+  allow list: if false;
+  allow create: if isSignedIn() && isOwner(userAccountId) && request.resource.data.userAccountId == userAccountId;
+  allow update: if isSignedIn() && isExistingOwner(userAccountId) && request.resource.data.userAccountId == userAccountId;
+  allow delete: if isSignedIn() && isExistingOwner(userAccountId) && request.resource.data.userAccountId == userAccountId;
+  }
+ 
+
+  /**
+  * @description Helper function to determine if the user is signed in.
+  */
+  function isSignedIn() {
+  return request.auth != null;
+  }
+ 
+
+  /**
+  * @description Helper function to determine if the user is the owner of the resource.
+  */
+  function isOwner(userId) {
+  return request.auth.uid == userId;
+  }
+ 
+
+  /**
+  * @description Helper function to determine if the user is the existing owner of the resource.
+  * It verifies both ownership and that the resource exists.
+  */
+  function isExistingOwner(userId) {
+  return isOwner(userId) && resource != null;
+  }
+  }
+ }
