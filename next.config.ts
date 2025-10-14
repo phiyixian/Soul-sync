@@ -34,6 +34,12 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'api.pixellab.ai',
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
 };

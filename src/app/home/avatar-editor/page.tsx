@@ -93,7 +93,7 @@ export default function AvatarEditorPage() {
 
   const getSelectedImageUrl = (category: keyof AvatarSelection) => {
     const options = category === 'hair' ? hairAssets : category === 'eyes' ? eyeAssets : clothesAssets;
-    return options.find(o => o.id === selection[category])?.imageUrl;
+    return options.find(o => o.id === selection[category])?.imageUrl || '';
   };
 
   const handleSave = async () => {
@@ -141,27 +141,36 @@ export default function AvatarEditorPage() {
         <Card className="mx-auto w-fit bg-card/50 backdrop-blur-sm">
           <CardContent className="p-4">
             <div className="relative h-48 w-36">
-              <Image
-                src={getSelectedImageUrl('clothes') || ''}
-                alt="Avatar clothes"
-                fill
-                className="pixelated object-contain"
-                data-ai-hint="pixel art character"
-              />
-              <Image
-                src={getSelectedImageUrl('eyes') || ''}
-                alt="Avatar eyes"
-                fill
-                className="pixelated object-contain"
-                data-ai-hint="pixel art eyes"
-              />
-              <Image
-                src={getSelectedImageUrl('hair') || ''}
-                alt="Avatar hair"
-                fill
-                className="pixelated object-contain"
-                data-ai-hint="pixel art hair"
-              />
+              {getSelectedImageUrl('clothes') && (
+                <Image
+                  src={getSelectedImageUrl('clothes')}
+                  alt="Avatar clothes"
+                  fill
+                  unoptimized
+                  className="pixelated object-contain"
+                  data-ai-hint="pixel art character"
+                />
+              )}
+              {getSelectedImageUrl('eyes') && (
+                <Image
+                  src={getSelectedImageUrl('eyes')}
+                  alt="Avatar eyes"
+                  fill
+                  unoptimized
+                  className="pixelated object-contain"
+                  data-ai-hint="pixel art eyes"
+                />
+              )}
+              {getSelectedImageUrl('hair') && (
+                <Image
+                  src={getSelectedImageUrl('hair')}
+                  alt="Avatar hair"
+                  fill
+                  unoptimized
+                  className="pixelated object-contain"
+                  data-ai-hint="pixel art hair"
+                />
+              )}
             </div>
           </CardContent>
         </Card>
@@ -191,6 +200,7 @@ export default function AvatarEditorPage() {
                     src={option.imageUrl}
                     alt={option.name}
                     fill
+                    unoptimized
                     className="pixelated object-cover"
                     data-ai-hint="pixel art hair"
                   />
@@ -215,6 +225,7 @@ export default function AvatarEditorPage() {
                     src={option.imageUrl}
                     alt={option.name}
                     fill
+                    unoptimized
                     className="pixelated object-cover"
                     data-ai-hint="pixel art eyes"
                   />
@@ -239,6 +250,7 @@ export default function AvatarEditorPage() {
                     src={option.imageUrl}
                     alt={option.name}
                     fill
+                    unoptimized
                     className="pixelated object-cover"
                     data-ai-hint="pixel art clothes"
                   />
