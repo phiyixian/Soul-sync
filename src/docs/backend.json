@@ -1,0 +1,511 @@
+
+{
+  "entities": {
+    "UserAccount": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserAccount",
+      "type": "object",
+      "description": "Represents a user account within the SoulSync app.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user account."
+        },
+        "username": {
+          "type": "string",
+          "description": "The username of the user account."
+        },
+        "email": {
+          "type": "string",
+          "description": "The email address of the user.",
+          "format": "email"
+        },
+        "dateJoined": {
+          "type": "string",
+          "description": "The date and time the user joined the app.",
+          "format": "date-time"
+        },
+        "partnerAccountId": {
+          "type": ["string", "null"],
+          "description": "Reference to UserAccount of the linked partner. Null if not linked. (Relationship: UserAccount 1:1 UserAccount)"
+        }
+      },
+      "required": [
+        "id",
+        "username",
+        "email",
+        "dateJoined"
+      ]
+    },
+    "Avatar": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Avatar",
+      "type": "object",
+      "description": "Represents the customizable avatar of a user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the avatar."
+        },
+        "userAccountId": {
+          "type": "string",
+          "description": "Reference to UserAccount that owns this avatar. (Relationship: UserAccount 1:1 Avatar)"
+        },
+        "hairStyle": {
+          "type": "string",
+          "description": "The selected hair style for the avatar."
+        },
+        "faceType": {
+          "type": "string",
+          "description": "The selected face type for the avatar."
+        },
+        "eyeType": {
+          "type": "string",
+          "description": "The selected eye type for the avatar."
+        },
+        "clothing": {
+          "type": "string",
+          "description": "The selected clothing for the avatar."
+        }
+      },
+      "required": [
+        "id",
+        "userAccountId",
+        "hairStyle",
+        "faceType",
+        "eyeType",
+        "clothing"
+      ]
+    },
+    "Message": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Message",
+      "type": "object",
+      "description": "Represents a message exchanged between partners.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the message."
+        },
+        "senderAccountId": {
+          "type": "string",
+          "description": "Reference to UserAccount of the message sender. (Relationship: UserAccount 1:N Message)"
+        },
+        "recipientAccountId": {
+          "type": "string",
+          "description": "Reference to UserAccount of the message recipient. (Relationship: UserAccount 1:N Message)"
+        },
+        "participantIds": {
+            "type": "array",
+            "description": "An array containing the IDs of both participants for easier querying.",
+            "items": { "type": "string" }
+        },
+        "content": {
+          "type": "string",
+          "description": "The content of the message."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "The date and time the message was sent.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "senderAccountId",
+        "recipientAccountId",
+        "participantIds",
+        "content",
+        "timestamp"
+      ]
+    },
+    "StatusUpdate": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "StatusUpdate",
+      "type": "object",
+      "description": "Represents a user's status update (e.g., studying, eating).",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the status update."
+        },
+        "userAccountId": {
+          "type": "string",
+          "description": "Reference to UserAccount that posted the status. (Relationship: UserAccount 1:N StatusUpdate)"
+        },
+        "statusType": {
+          "type": "string",
+          "description": "The type of status (e.g., studying, eating, sleeping)."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "The date and time the status was updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userAccountId",
+        "statusType",
+        "timestamp"
+      ]
+    },
+    "Gift": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Gift",
+      "type": "object",
+      "description": "Represents a gift that can be sent to a partner.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the gift."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the gift."
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the gift."
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "URL to the image representing the gift.",
+          "format": "uri"
+        },
+        "cost": {
+          "type": "number",
+          "description": "The cost of the gift in in-app currency."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description",
+        "imageUrl",
+        "cost"
+      ]
+    },
+    "Purchase": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Purchase",
+      "type": "object",
+      "description": "Represents a purchase of a gift by a user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the purchase."
+        },
+        "buyerAccountId": {
+          "type": "string",
+          "description": "Reference to UserAccount that made the purchase. (Relationship: UserAccount 1:N Purchase)"
+        },
+        "recipientAccountId": {
+          "type": "string",
+          "description": "Reference to UserAccount that will receive the gift. (Relationship: UserAccount 1:N Purchase)"
+        },
+        "giftId": {
+          "type": "string",
+          "description": "Reference to Gift that was purchased. (Relationship: Gift 1:N Purchase)"
+        },
+        "purchaseDate": {
+          "type": "string",
+          "description": "The date and time of the purchase.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "buyerAccountId",
+        "recipientAccountId",
+        "giftId",
+        "purchaseDate"
+      ]
+    },
+    "Notification": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Notification",
+      "type": "object",
+      "description": "Represents a notification for a user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the notification."
+        },
+        "userAccountId": {
+          "type": "string",
+          "description": "Reference to UserAccount the notification belongs to. (Relationship: UserAccount 1:N Notification)"
+        },
+        "type": {
+          "type": "string",
+          "description": "The type of notification (e.g., new message, gift received, friend request)."
+        },
+        "content": {
+          "type": "string",
+          "description": "The content of the notification."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "The date and time the notification was created.",
+          "format": "date-time"
+        },
+        "isRead": {
+          "type": "boolean",
+          "description": "Indicates whether the notification has been read by the user."
+        }
+      },
+      "required": [
+        "id",
+        "userAccountId",
+        "type",
+        "content",
+        "timestamp",
+        "isRead"
+      ]
+    },
+    "PartnerRequest": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "PartnerRequest",
+      "type": "object",
+      "description": "Represents a partner link request between users.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the partner request."
+        },
+        "requestingAccountId": {
+          "type": "string",
+          "description": "Reference to UserAccount that sent the request. (Relationship: UserAccount 1:N PartnerRequest)"
+        },
+        "requestedAccountId": {
+          "type": "string",
+          "description": "Reference to UserAccount that received the request. (Relationship: UserAccount 1:N PartnerRequest)"
+        },
+        "status": {
+          "type": "string",
+          "description": "The status of the partner request (e.g., pending, accepted, rejected)."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "The date and time the request was sent.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "requestingAccountId",
+        "requestedAccountId",
+        "status",
+        "timestamp"
+      ]
+    },
+    "RoomItem": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "RoomItem",
+      "type": "object",
+      "description": "Represents furniture or decorations in the partner's room.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the room item."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the room item."
+        },
+        "description": {
+          "type": "string",
+          "description": "A brief description of the item."
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "URL to the image representing the room item.",
+          "format": "uri"
+        },
+        "cost": {
+          "type": "number",
+          "description": "The cost of the room item in in-app currency."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description",
+        "imageUrl",
+        "cost"
+      ]
+    },
+    "UserRoom": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserRoom",
+      "type": "object",
+      "description": "Represents the items in a user's room.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user room."
+        },
+        "userAccountId": {
+          "type": "string",
+          "description": "Reference to UserAccount that owns the room. (Relationship: UserAccount 1:1 UserRoom)"
+        },
+        "roomItemIds": {
+          "type": "array",
+          "description": "References to RoomItems in the user's room. (Relationship: RoomItem N:N UserRoom)",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "userAccountId"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password"
+    ]
+  },
+  "firestore": {
+    "collections": [
+      {
+        "path": "/userAccounts/{userAccountId}",
+        "definition": {
+          "entityName": "UserAccount",
+          "schema": {
+            "$ref": "#/backend/entities/UserAccount"
+          },
+          "description": "Stores user account information. Root-level collection for easy user lookup.",
+          "params": [
+            {
+              "name": "userAccountId",
+              "description": "The unique ID of the user account."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/avatars/{avatarId}",
+        "definition": {
+          "entityName": "Avatar",
+          "schema": {
+            "$ref": "#/backend/entities/Avatar"
+          },
+          "description": "Stores avatar information. Root level for easy retrieval during profile management.",
+          "params": [
+            {
+              "name": "avatarId",
+              "description": "The unique ID of the avatar."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/messages",
+        "definition": {
+          "entityName": "Message",
+          "schema": {
+            "$ref": "#/backend/entities/Message"
+          },
+          "description": "Stores messages exchanged between partners."
+        }
+      },
+      {
+        "path": "/statusUpdates/{statusUpdateId}",
+        "definition": {
+          "entityName": "StatusUpdate",
+          "schema": {
+            "$ref": "#/backend/entities/StatusUpdate"
+          },
+          "description": "Stores user status updates.",
+          "params": [
+            {
+              "name": "statusUpdateId",
+              "description": "The unique ID of the status update."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/gifts/{giftId}",
+        "definition": {
+          "entityName": "Gift",
+          "schema": {
+            "$ref": "#/backend/entities/Gift"
+          },
+          "description": "Stores gift information.",
+          "params": [
+            {
+              "name": "giftId",
+              "description": "The unique ID of the gift."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/purchases",
+        "definition": {
+          "entityName": "Purchase",
+          "schema": {
+            "$ref": "#/backend/entities/Purchase"
+          },
+          "description": "Stores purchase information."
+        }
+      },
+      {
+        "path": "/users/{userAccountId}/notifications",
+        "definition": {
+          "entityName": "Notification",
+          "schema": {
+            "$ref": "#/backend/entities/Notification"
+          },
+          "description": "Stores notifications for a user.",
+          "params": [
+            {
+              "name": "userAccountId",
+              "description": "The unique ID of the user account."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/partnerRequests",
+        "definition": {
+          "entityName": "PartnerRequest",
+          "schema": {
+            "$ref": "#/backend/entities/PartnerRequest"
+          },
+          "description": "Stores partner requests."
+        }
+      },
+      {
+        "path": "/roomItems",
+        "definition": {
+          "entityName": "RoomItem",
+          "schema": {
+            "$ref": "#/backend/entities/RoomItem"
+          },
+          "description": "Stores purchasable room items."
+        }
+      },
+      {
+        "path": "/users/{userAccountId}/rooms",
+        "definition": {
+          "entityName": "UserRoom",
+          "schema": {
+            "$ref": "#/backend/entities/UserRoom"
+          },
+          "description": "Stores the room data for a user.",
+          "params": [
+            {
+              "name": "userAccountId",
+              "description": "The unique ID of the user account."
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
