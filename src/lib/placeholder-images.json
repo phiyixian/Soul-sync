@@ -1,3 +1,100 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "welcome-art",
+      "description": "Cute pixel art of two characters sitting on a crescent moon.",
+      "imageUrl": "https://picsum.photos/seed/soulsync1/600/400",
+      "imageHint": "pixel art couple"
+    },
+    {
+      "id": "avatar-idle",
+      "description": "Pixel art character standing and waving.",
+      "imageUrl": "https://picsum.photos/seed/soulsync-idle/300/400",
+      "imageHint": "pixel art character"
+    },
+    {
+      "id": "avatar-sleeping",
+      "description": "Pixel art character sleeping in a bed.",
+      "imageUrl": "https://picsum.photos/seed/soulsync-sleep/300/400",
+      "imageHint": "pixel art sleeping"
+    },
+    {
+      "id": "avatar-eating",
+      "description": "Pixel art character eating a bowl of ramen.",
+      "imageUrl": "https://picsum.photos/seed/soulsync-eat/300/400",
+      "imageHint": "pixel art eating"
+    },
+    {
+      "id": "avatar-studying",
+      "description": "Pixel art character reading a book at a desk.",
+      "imageUrl": "https://picsum.photos/seed/soulsync-study/300/400",
+      "imageHint": "pixel art reading"
+    },
+    {
+      "id": "avatar-showering",
+      "description": "Pixel art character in a shower with bubbles.",
+      "imageUrl": "https://picsum.photos/seed/soulsync-shower/300/400",
+      "imageHint": "pixel art character"
+    },
+    {
+      "id": "shop-plushie",
+      "description": "A cute pixel art plushie toy.",
+      "imageUrl": "https://picsum.photos/seed/soulsync-plushie/200/200",
+      "imageHint": "pixel art toy"
+    },
+    {
+      "id": "shop-lamp",
+      "description": "A cute pixel art lamp.",
+      "imageUrl": "https://picsum.photos/seed/soulsync-lamp/200/200",
+      "imageHint": "pixel art furniture"
+    },
+    {
+      "id": "shop-plant",
+      "description": "A cute pixel art potted plant.",
+      "imageUrl": "https://picsum.photos/seed/soulsync-plant/200/200",
+      "imageHint": "pixel art plant"
+    },
+    {
+      "id": "shop-rug",
+      "description": "A cute pixel art heart-shaped rug.",
+      "imageUrl": "https://picsum.photos/seed/soulsync-rug/200/200",
+      "imageHint": "pixel art rug"
+    },
+    {
+      "id": "hair-1",
+      "description": "Short black hair style for avatar.",
+      "imageUrl": "https://picsum.photos/seed/hair1/100/100",
+      "imageHint": "pixel art hair"
+    },
+    {
+      "id": "hair-2",
+      "description": "Long brown hair style for avatar.",
+      "imageUrl": "https://picsum.photos/seed/hair2/100/100",
+      "imageHint": "pixel art hair"
+    },
+    {
+      "id": "eyes-1",
+      "description": "Simple black eyes for avatar.",
+      "imageUrl": "https://picsum.photos/seed/eyes1/100/100",
+      "imageHint": "pixel art eyes"
+    },
+    {
+      "id": "eyes-2",
+      "description": "Sparkling blue eyes for avatar.",
+      "imageUrl": "https://picsum.photos/seed/eyes2/100/100",
+      "imageHint": "pixel art eyes"
+    },
+    {
+      "id": "clothes-1",
+      "description": "A simple t-shirt for avatar.",
+      "imageUrl": "https://picsum.photos/seed/clothes1/100/100",
+      "imageHint": "pixel art shirt"
+    },
+    {
+      "id": "clothes-2",
+      "description": "A cozy sweater for avatar.",
+      "imageUrl": "https://picsum.photos/seed/clothes2/100/100",
+      "imageHint": "pixel art sweater"
+    }
+  ]
 }
