@@ -47,9 +47,9 @@
    * @deny (delete) - User with ID 'user456' cannot delete the account of user 'user123'.
    * @principle Enforces document ownership for writes.
    */
-  match /userAccounts/{userAccountId} {
-  allow get: if isSignedIn() && isOwner(userAccountId);
-  allow list: if false;
+ match /userAccounts/{userAccountId} {
+ allow get: if isSignedIn();
+ allow list: if isSignedIn();
   allow create: if isSignedIn() && isOwner(userAccountId) && request.resource.data.id == request.auth.uid;
   allow update: if isSignedIn() && isExistingOwner(userAccountId) && request.resource.data.id == resource.data.id;
   allow delete: if isSignedIn() && isExistingOwner(userAccountId);
@@ -68,11 +68,18 @@
    *  @deny (delete) - User with ID 'user456' cannot delete the avatar of user 'user123'.
    * @principle Enforces document ownership for writes.
    */
-  match /avatars/{avatarId} {
+ match /avatars/{avatarId} {
   allow get: if true;
   allow list: if false;
-  allow create: if isSignedIn() && request.resource.data.userAccountId == request.auth.uid;
-  allow update: if isSignedIn() && isExistingOwner(resource.data.userAccountId);
+  // Allow owner to write their own avatar, or partner to write their partner's avatar
+  allow create: if isSignedIn() && (
+    request.resource.data.userAccountId == request.auth.uid ||
+    isPartner(request.resource.data.userAccountId)
+  );
+  allow update: if isSignedIn() && (
+    isExistingOwner(resource.data.userAccountId) ||
+    isPartner(resource.data.userAccountId)
+  );
   allow delete: if isSignedIn() && isExistingOwner(resource.data.userAccountId);
   }
  
@@ -181,13 +188,13 @@
    *  @deny (delete) - User with ID 'user456' cannot delete the notification of user 'user123'.
    * @principle Restricts access to a user's own data tree.
    */
-  match /users/{userAccountId}/notifications/{notificationId} {
-  allow get: if isSignedIn() && isOwner(userAccountId);
-  allow list: if isSignedIn() && isOwner(userAccountId);
-  allow create: if isSignedIn() && isOwner(userAccountId) && request.resource.data.userAccountId == userAccountId;
-  allow update: if isSignedIn() && isExistingOwner(userAccountId) && request.resource.data.userAccountId == userAccountId;
-  allow delete: if isSignedIn() && isExistingOwner(userAccountId) && request.resource.data.userAccountId == userAccountId;
-  }
+ match /users/{userAccountId}/notifications/{notificationId} {
+ allow get: if isSignedIn() && (isOwner(userAccountId) || isPartner(userAccountId));
+ allow list: if isSignedIn() && (isOwner(userAccountId) || isPartner(userAccountId));
+ allow create: if isSignedIn() && (isOwner(userAccountId) || isPartner(userAccountId));
+ allow update: if isSignedIn() && (isExistingOwner(userAccountId) || isPartner(userAccountId));
+ allow delete: if isSignedIn() && (isExistingOwner(userAccountId) || isPartner(userAccountId));
+ }
  
 
   /**
@@ -252,6 +259,24 @@
   allow update: if isSignedIn() && isExistingOwner(userAccountId) && request.resource.data.userAccountId == userAccountId;
   allow delete: if isSignedIn() && isExistingOwner(userAccountId) && request.resource.data.userAccountId == userAccountId;
   }
+
+ // Room inventory items under a user
+ match /users/{userAccountId}/roomInventory/{itemId} {
+  allow get: if isSignedIn() && (isOwner(userAccountId) || isPartner(userAccountId));
+  allow list: if isSignedIn() && (isOwner(userAccountId) || isPartner(userAccountId));
+  allow create: if isSignedIn() && (isOwner(userAccountId) || isPartner(userAccountId));
+  allow update: if isSignedIn() && (isExistingOwner(userAccountId) || isPartner(userAccountId));
+  allow delete: if isSignedIn() && isExistingOwner(userAccountId);
+ }
+
+ // Schedules
+ match /schedules/{userAccountId} {
+  allow get: if true;
+  allow list: if false;
+  allow create: if isSignedIn() && request.resource.data.userAccountId == request.auth.uid;
+  allow update: if isSignedIn() && isOwner(userAccountId);
+  allow delete: if isSignedIn() && isOwner(userAccountId);
+ }
  
 
   /**
@@ -277,5 +302,12 @@
   function isExistingOwner(userId) {
   return isOwner(userId) && resource != null;
   }
+
+ /** Determine if the requesting user is the linked partner of userId */
+ function isPartner(userId) {
+  return isSignedIn() && (
+    get(/databases/$(database)/documents/userAccounts/$(userId)).data.partnerAccountId == request.auth.uid
+  );
+ }
   }
  }

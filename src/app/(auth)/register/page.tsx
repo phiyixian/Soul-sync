@@ -25,6 +25,8 @@ export default function RegisterPage() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [myGender, setMyGender] = useState<'female' | 'male' | 'nonbinary' | 'trans' | 'other'>('other');
+  const [partnerGender, setPartnerGender] = useState<'female' | 'male' | 'nonbinary' | 'trans' | 'other'>('other');
   const auth = useAuth();
   const firestore = useFirestore();
   const router = useRouter();
@@ -64,6 +66,7 @@ export default function RegisterPage() {
           email: user.email,
           dateJoined: new Date().toISOString(),
           partnerAccountId: null,
+          profile: { gender: myGender, partnerPreference: partnerGender },
         };
         const userDocRef = doc(firestore, 'userAccounts', user.uid);
         setDocumentNonBlocking(userDocRef, userAccountData, { merge: true });
@@ -122,6 +125,28 @@ export default function RegisterPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="myGender">Your Gender (optional)</Label>
+                <select id="myGender" className="w-full border rounded px-3 py-2" value={myGender} onChange={(e) => setMyGender(e.target.value as any)}>
+                  <option value="female">Female</option>
+                  <option value="male">Male</option>
+                  <option value="nonbinary">Non-binary</option>
+                  <option value="trans">Trans</option>
+                  <option value="other">Prefer not to say</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="partnerGender">Partner Gender (optional)</Label>
+                <select id="partnerGender" className="w-full border rounded px-3 py-2" value={partnerGender} onChange={(e) => setPartnerGender(e.target.value as any)}>
+                  <option value="female">Female</option>
+                  <option value="male">Male</option>
+                  <option value="nonbinary">Non-binary</option>
+                  <option value="trans">Trans</option>
+                  <option value="other">No preference</option>
+                </select>
+              </div>
             </div>
             <Button type="submit" className="w-full">
               Create Account

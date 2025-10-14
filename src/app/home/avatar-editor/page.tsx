@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,6 +9,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { avatarOptions, AvatarOption } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import { ArrowLeft, Check } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useDoc, useFirebase, useUser } from "@/firebase";
+import { doc, setDoc } from "firebase/firestore";
 
 type AvatarSelection = {
   hair: string;
@@ -22,6 +25,16 @@ export default function AvatarEditorPage() {
     eyes: avatarOptions.eyes[0].id,
     clothes: avatarOptions.clothes[0].id,
   });
+  const { toast } = useToast();
+  const { user } = useUser();
+  const { firestore } = useFirebase();
+
+  const userAccountRef = useMemo(
+    () => (user ? doc(firestore, 'userAccounts', user.uid) : null),
+    [user, firestore]
+  );
+  const { data: userAccount } = useDoc(userAccountRef);
+  const partnerId = userAccount?.partnerAccountId as string | undefined;
 
   const handleSelect = (category: keyof AvatarSelection, id: string) => {
     setSelection((prev) => ({ ...prev, [category]: id }));
@@ -31,6 +44,31 @@ export default function AvatarEditorPage() {
     const options = avatarOptions[category] as AvatarOption[];
     return options.find((opt) => opt.id === selection[category])?.image;
   };
+
+  const handleSave = async () => {
+    if (!user || !firestore || !partnerId) {
+      toast({
+        variant: 'destructive',
+        title: "Can't save avatar",
+        description: 'Link with your partner first.',
+      });
+      return;
+    }
+    const avatarDocRef = doc(firestore, 'avatars', partnerId);
+    await setDoc(
+      avatarDocRef,
+      {
+        userAccountId: partnerId,
+        hairStyle: selection.hair,
+        eyeType: selection.eyes,
+        clothing: selection.clothes,
+        updatedBy: user.uid,
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+    toast({ title: 'Saved!', description: "Your partner's avatar has been updated." });
+  };
   
   return (
     <div className="flex h-full flex-col">
@@ -39,9 +77,14 @@ export default function AvatarEditorPage() {
             <Link href="/home/profile"><ArrowLeft /></Link>
         </Button>
         <h1 className="text-lg font-bold">Create Your Partner's Avatar</h1>
-        <Button variant="primary" asChild>
-          <Link href="/home">Done <Check className="ml-2 h-4 w-4" /></Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={handleSave}>
+            Save <Check className="ml-2 h-4 w-4" />
+          </Button>
+          <Button variant="primary" asChild>
+            <Link href="/home">Done</Link>
+          </Button>
+        </div>
       </header>
       <div className="flex-1 bg-accent/30 p-4">
         <Card className="mx-auto w-fit bg-card/50 backdrop-blur-sm">

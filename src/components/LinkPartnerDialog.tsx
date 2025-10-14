@@ -59,6 +59,7 @@ export function LinkPartnerDialog({
 
       const partnerDoc = querySnapshot.docs[0];
       const partnerId = partnerDoc.id;
+      const partnerData: any = partnerDoc.data();
 
       if (partnerId === user.uid) {
         toast({
@@ -69,7 +70,22 @@ export function LinkPartnerDialog({
         return;
       }
 
-      // 2. Create a partner request
+      // 2. Prevent linking if either user is already linked
+      const currentUserRef = doc(firestore, 'userAccounts', user.uid);
+      const currentUserSnap = await getDocs(query(collection(firestore, 'userAccounts'), where('id', '==', user.uid)));
+      const currentUserLinked = currentUserSnap.empty ? false : Boolean(currentUserSnap.docs[0].data().partnerAccountId);
+      const partnerAlreadyLinked = Boolean(partnerData?.partnerAccountId);
+
+      if (currentUserLinked || partnerAlreadyLinked) {
+        toast({
+          variant: 'destructive',
+          title: 'Already linked',
+          description: 'Either you or the partner is already linked.',
+        });
+        return;
+      }
+
+      // 3. Create a partner request
       const partnerRequestsRef = collection(firestore, 'partnerRequests');
       await addDoc(partnerRequestsRef, {
         requestingAccountId: user.uid,

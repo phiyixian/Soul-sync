@@ -21,6 +21,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { useMemo, useState, useRef, useEffect } from 'react';
+import { useMemoFirebase } from '@/firebase/provider';
 
 export default function MessagesPage() {
   const { user } = useUser();
@@ -28,13 +29,14 @@ export default function MessagesPage() {
   const [messageText, setMessageText] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const userAccountRef = user
-    ? doc(firestore, 'userAccounts', user.uid)
-    : null;
+  const userAccountRef = useMemoFirebase(
+    () => (user ? doc(firestore, 'userAccounts', user.uid) : null),
+    [user, firestore]
+  );
   const { data: userAccount } = useDoc(userAccountRef);
   const partnerId = userAccount?.partnerAccountId;
 
-  const messagesQuery = useMemo(() => {
+  const messagesQuery = useMemoFirebase(() => {
     if (!user || !partnerId) return null;
     return query(
       collection(firestore, 'messages'),
@@ -74,6 +76,13 @@ export default function MessagesPage() {
         recipientAccountId: partnerId,
         participantIds: [user.uid, partnerId],
         content: messageText,
+        timestamp: serverTimestamp(),
+      });
+      // Notify partner's mailbox
+      await addDoc(collection(firestore, 'users', partnerId, 'notifications'), {
+        type: 'message',
+        from: user.uid,
+        preview: messageText.slice(0, 120),
         timestamp: serverTimestamp(),
       });
       setMessageText('');

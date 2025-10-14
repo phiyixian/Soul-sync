@@ -16,6 +16,7 @@ import { useAuth, useDoc, useFirebase, useUser } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { useState } from 'react';
 import { LinkPartnerDialog } from '@/components/LinkPartnerDialog';
+import { useMemoFirebase } from '@/firebase/provider';
 
 export default function ProfilePage() {
   const { user } = useUser();
@@ -24,15 +25,18 @@ export default function ProfilePage() {
   const [isLinkPartnerDialogOpen, setIsLinkPartnerDialogOpen] =
     useState(false);
 
-  const userAccountRef = user
-    ? doc(firestore, 'userAccounts', user.uid)
-    : null;
+  const userAccountRef = useMemoFirebase(
+    () => (user ? doc(firestore, 'userAccounts', user.uid) : null),
+    [user, firestore]
+  );
   const { data: userAccount } = useDoc(userAccountRef);
-
-  const partnerAccountRef =
-    userAccount && userAccount.partnerAccountId
-      ? doc(firestore, 'userAccounts', userAccount.partnerAccountId)
-      : null;
+  const partnerAccountRef = useMemoFirebase(
+    () =>
+      userAccount && userAccount.partnerAccountId
+        ? doc(firestore, 'userAccounts', userAccount.partnerAccountId)
+        : null,
+    [firestore, userAccount]
+  );
   const { data: partnerAccount } = useDoc(partnerAccountRef);
 
   const handleLogout = () => {

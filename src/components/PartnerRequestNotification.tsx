@@ -19,13 +19,14 @@ import {
 } from './ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useMemo } from 'react';
+import { useMemoFirebase } from '@/firebase/provider';
 
 export function PartnerRequestNotification() {
   const { user } = useUser();
   const { firestore } = useFirebase();
   const { toast } = useToast();
 
-  const partnerRequestsQuery = useMemo(() => {
+  const partnerRequestsQuery = useMemoFirebase(() => {
     if (!user) return null;
     return query(
       collection(firestore, 'partnerRequests'),

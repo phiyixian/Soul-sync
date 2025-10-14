@@ -19,6 +19,7 @@ import {
 } from './ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useMemo, useState } from 'react';
+import { useMemoFirebase } from '@/firebase/provider';
 import { shopItems } from '@/lib/data';
 import Image from 'next/image';
 import { Gift } from 'lucide-react';
@@ -29,7 +30,7 @@ export function GiftNotification() {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
 
-  const purchasesQuery = useMemo(() => {
+  const purchasesQuery = useMemoFirebase(() => {
     if (!user) return null;
     return query(
       collection(firestore, 'purchases'),

@@ -9,31 +9,31 @@
     {
       "id": "avatar-idle",
       "description": "Pixel art character standing and waving.",
-      "imageUrl": "https://picsum.photos/seed/soulsync-idle/300/400",
+      "imageUrl": "https://backblaze.pixellab.ai/file/pixellab-characters/96b81c43-7069-4815-899c-5fe6dab89911/a175e305-6ebf-4ee4-b812-f54a102e15f3/rotations/south.png",
       "imageHint": "pixel art character"
     },
     {
       "id": "avatar-sleeping",
       "description": "Pixel art character sleeping in a bed.",
-      "imageUrl": "https://picsum.photos/seed/soulsync-sleep/300/400",
+      "imageUrl": "https://backblaze.pixellab.ai/file/pixellab-characters/96b81c43-7069-4815-899c-5fe6dab89911/a175e305-6ebf-4ee4-b812-f54a102e15f3/rotations/south.png",
       "imageHint": "pixel art sleeping"
     },
     {
       "id": "avatar-eating",
       "description": "Pixel art character eating a bowl of ramen.",
-      "imageUrl": "https://picsum.photos/seed/soulsync-eat/300/400",
+      "imageUrl": "https://backblaze.pixellab.ai/file/pixellab-characters/96b81c43-7069-4815-899c-5fe6dab89911/a175e305-6ebf-4ee4-b812-f54a102e15f3/rotations/south.png",
       "imageHint": "pixel art eating"
     },
     {
       "id": "avatar-studying",
       "description": "Pixel art character reading a book at a desk.",
-      "imageUrl": "https://picsum.photos/seed/soulsync-study/300/400",
+      "imageUrl": "https://backblaze.pixellab.ai/file/pixellab-characters/96b81c43-7069-4815-899c-5fe6dab89911/a175e305-6ebf-4ee4-b812-f54a102e15f3/rotations/south.png",
       "imageHint": "pixel art reading"
     },
     {
       "id": "avatar-showering",
       "description": "Pixel art character in a shower with bubbles.",
-      "imageUrl": "https://picsum.photos/seed/soulsync-shower/300/400",
+      "imageUrl": "https://backblaze.pixellab.ai/file/pixellab-characters/96b81c43-7069-4815-899c-5fe6dab89911/a175e305-6ebf-4ee4-b812-f54a102e15f3/rotations/south.png",
       "imageHint": "pixel art character"
     },
     {

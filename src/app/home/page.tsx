@@ -16,6 +16,7 @@ import { Heart, Send, MessageCircle } from 'lucide-react';
 import { PixelHeartIcon } from '@/components/icons/PixelHeartIcon';
 import { useToast } from '@/hooks/use-toast';
 import { useDoc, useFirebase, useUser } from '@/firebase';
+import { useMemoFirebase } from '@/firebase/provider';
 import {
   doc,
   collection,
@@ -38,19 +39,30 @@ export default function HomePage() {
   const [myStatusId, setMyStatusId] = useState<Status['id']>('idle');
   const [partnerStatus, setPartnerStatus] = useState<Status>(statuses[0]);
   const [kisses, setKisses] = useState<Kiss[]>([]);
+  const [schedule, setSchedule] = useState<string>('');
 
-  const userAccountRef = useMemo(
+  const userAccountRef = useMemoFirebase(
     () => (user ? doc(firestore, 'userAccounts', user.uid) : null),
     [user, firestore]
   );
   const { data: userAccount } = useDoc(userAccountRef);
   const partnerId = userAccount?.partnerAccountId;
 
-  const partnerAccountRef = useMemo(
+  const partnerAccountRef = useMemoFirebase(
     () => (partnerId ? doc(firestore, 'userAccounts', partnerId) : null),
     [partnerId, firestore]
   );
   const { data: partnerAccount } = useDoc(partnerAccountRef);
+  // Partner room inventory and placed items
+  const [roomItems, setRoomItems] = useState<any[]>([]);
+  useEffect(() => {
+    if (!partnerId) return;
+    const invRef = collection(firestore, 'users', partnerId, 'roomInventory');
+    const unsub = onSnapshot(invRef, (snap) => {
+      setRoomItems(snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })));
+    });
+    return () => unsub();
+  }, [partnerId, firestore]);
 
   // Listen to partner's status updates
   useEffect(() => {
@@ -99,6 +111,16 @@ export default function HomePage() {
     });
 
     return () => unsubscribe();
+  }, [user, firestore]);
+
+  // Load my schedule
+  useEffect(() => {
+    if (!user) return;
+    const scheduleRef = doc(firestore, 'schedules', user.uid);
+    const unsub = onSnapshot(scheduleRef, (s) => {
+      if (s.exists()) setSchedule((s.data() as any).text || '');
+    });
+    return () => unsub();
   }, [user, firestore]);
 
   const handleStatusChange = async (statusId: Status['id']) => {
@@ -169,6 +191,26 @@ export default function HomePage() {
     });
   };
 
+  const saveSchedule = async () => {
+    if (!user) return;
+    const scheduleRef = doc(firestore, 'schedules', user.uid);
+    await updateDoc(scheduleRef, {
+      userAccountId: user.uid,
+      text: schedule,
+      updatedAt: serverTimestamp(),
+    }).catch(async (e) => {
+      const { setDocumentNonBlocking } = await import(
+        '@/firebase/non-blocking-updates'
+      );
+      setDocumentNonBlocking(
+        scheduleRef,
+        { userAccountId: user.uid, text: schedule, updatedAt: serverTimestamp() },
+        { merge: true }
+      );
+    });
+    toast({ title: 'Schedule saved' });
+  };
+
   const sendHug = () => {
     if (!user || !partnerId) {
       toast({
@@ -178,9 +220,19 @@ export default function HomePage() {
       });
       return;
     }
-    toast({
-      title: '🤗 Hugs! 🤗',
-      description: 'You sent a hug to your partner!',
+    // local effect
+    toast({ title: '🤗 Hugs! 🤗', description: 'You sent a hug to your partner!' });
+    // remote notification
+    const partnerNotificationsRef = collection(
+      firestore,
+      'users',
+      partnerId,
+      'notifications'
+    );
+    addDoc(partnerNotificationsRef, {
+      type: 'hug',
+      from: user.uid,
+      timestamp: serverTimestamp(),
     });
   };
 
@@ -223,6 +275,11 @@ export default function HomePage() {
               className="pixelated object-contain"
               data-ai-hint={partnerStatus.image.imageHint}
             />
+            {roomItems.filter(i => i.placed).map((i, idx) => (
+              <div key={i.id} className="absolute" style={{ left: (idx % 3) * 90 + 10, top: Math.floor(idx / 3) * 90 + 260 }}>
+                <Image src={i.imageUrl} alt={i.name} width={64} height={64} className="pixelated" />
+              </div>
+            ))}
             {kisses.map((kiss) => (
               <div
                 key={kiss.id}
@@ -241,6 +298,26 @@ export default function HomePage() {
            </div>
         )}
       </div>
+
+      {partnerId && (
+        <div className="rounded-lg bg-card/80 p-3 shadow-sm backdrop-blur-sm">
+          <p className="text-sm mb-2">My Partner's Room Items</p>
+          <div className="grid grid-cols-3 gap-2">
+            {roomItems.map((item) => (
+              <div key={item.id} className="flex items-center justify-between rounded border px-2 py-1">
+                <span className="text-xs truncate mr-2">{item.name}</span>
+                <Button size="xs" variant={item.placed ? 'secondary' : 'primary'} onClick={async () => {
+                  const { doc, updateDoc } = await import('firebase/firestore');
+                  const ref = doc(firestore, 'users', partnerId, 'roomInventory', item.id);
+                  await updateDoc(ref, { placed: !item.placed });
+                }}>
+                  {item.placed ? 'Unplace' : 'Place'}
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="flex items-center justify-center gap-4 rounded-lg bg-card/80 p-4 shadow-sm backdrop-blur-sm">
         <Button
@@ -272,6 +349,14 @@ export default function HomePage() {
             <span className="text-xs">Msg</span>
           </Link>
         </Button>
+      </div>
+
+      <div className="mt-3 rounded-lg bg-card/80 p-3 shadow-sm backdrop-blur-sm">
+        <p className="text-sm mb-2">My Schedule (visible to partner)</p>
+        <div className="flex gap-2">
+          <input className="flex-1 rounded border px-3 py-2" value={schedule} onChange={(e) => setSchedule(e.target.value)} placeholder="e.g., Study 7-9pm; Gym 9-10pm" />
+          <Button onClick={saveSchedule} size="sm">Save</Button>
+        </div>
       </div>
     </div>
   );

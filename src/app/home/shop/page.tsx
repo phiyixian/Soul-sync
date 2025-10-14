@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { shopItems } from '@/lib/data';
 import { Gem } from 'lucide-react';
 import { useFirebase, useUser, useDoc, useCollection } from '@/firebase';
+import { useMemoFirebase } from '@/firebase/provider';
 import { doc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -33,9 +34,10 @@ export default function ShopPage() {
   const { toast } = useToast();
   const [selectedItem, setSelectedItem] = useState<any>(null);
 
-  const userAccountRef = user
-    ? doc(firestore, 'userAccounts', user.uid)
-    : null;
+  const userAccountRef = useMemoFirebase(
+    () => (user ? doc(firestore, 'userAccounts', user.uid) : null),
+    [user, firestore]
+  );
   const { data: userAccount } = useDoc(userAccountRef);
   const partnerId = userAccount?.partnerAccountId;
 
@@ -55,6 +57,14 @@ export default function ShopPage() {
         recipientAccountId: partnerId,
         giftId: selectedItem.id,
         purchaseDate: serverTimestamp(),
+      });
+      // Add gift to partner's room inventory list
+      await addDoc(collection(firestore, 'users', partnerId, 'roomInventory'), {
+        itemId: selectedItem.id,
+        name: selectedItem.name,
+        imageUrl: selectedItem.image.imageUrl,
+        placed: false,
+        addedAt: serverTimestamp(),
       });
 
       // In a real app, you would handle currency deduction here.
