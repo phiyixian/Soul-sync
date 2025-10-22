@@ -348,6 +348,21 @@
   allow update: if isSignedIn() && isOwner(userAccountId);
   allow delete: if isSignedIn() && isOwner(userAccountId);
  }
+
+ // Game Invites - Temporary permissive rules for testing
+ match /gameInvites/{inviteId} {
+  allow read, write: if isSignedIn();
+ }
+
+ // Game Sessions - Temporary permissive rules for testing
+ match /gameSessions/{sessionId} {
+  allow read, write: if isSignedIn();
+ }
+
+ // Credit Transactions - Temporary permissive rules for testing
+ match /creditTransactions/{transactionId} {
+  allow read, write: if isSignedIn();
+ }
  
 
   /**

@@ -25,7 +25,7 @@ export default function WelcomePage() {
         </div>
 
         <div className="space-y-2">
-          <h1 className="text-4xl font-bold tracking-tight text-foreground">Soulsync — Close the Distance</h1>
+          <h1 className="text-4xl font-bold tracking-tight text-foreground">Uwe — Close the Distance</h1>
           <p className="text-muted-foreground">Cute pixel vibes for long‑distance love.</p>
         </div>
 

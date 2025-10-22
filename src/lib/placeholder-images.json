@@ -9,55 +9,55 @@
     {
       "id": "avatar-idle",
       "description": "Pixel art character standing and waving.",
-      "imageUrl": "https://backblaze.pixellab.ai/file/pixellab-characters/96b81c43-7069-4815-899c-5fe6dab89911/a175e305-6ebf-4ee4-b812-f54a102e15f3/rotations/south.png",
+      "imageUrl": "https://picsum.photos/300/400?random=1",
       "imageHint": "pixel art character"
     },
     {
       "id": "avatar-sleeping",
       "description": "Pixel art character sleeping in a bed.",
-      "imageUrl": "https://backblaze.pixellab.ai/file/pixellab-characters/96b81c43-7069-4815-899c-5fe6dab89911/a175e305-6ebf-4ee4-b812-f54a102e15f3/rotations/south.png",
-      "imageHint": "pixel art sleeping"
+      "imageUrl": "/sleep.png",
+      "imageHint": "pixel art sleeping character in bed"
     },
     {
       "id": "avatar-eating",
       "description": "Pixel art character eating a bowl of ramen.",
-      "imageUrl": "https://backblaze.pixellab.ai/file/pixellab-characters/96b81c43-7069-4815-899c-5fe6dab89911/a175e305-6ebf-4ee4-b812-f54a102e15f3/rotations/south.png",
-      "imageHint": "pixel art eating"
+      "imageUrl": "/eat.png",
+      "imageHint": "pixel art character eating food"
     },
     {
       "id": "avatar-studying",
       "description": "Pixel art character reading a book at a desk.",
-      "imageUrl": "https://backblaze.pixellab.ai/file/pixellab-characters/96b81c43-7069-4815-899c-5fe6dab89911/a175e305-6ebf-4ee4-b812-f54a102e15f3/rotations/south.png",
-      "imageHint": "pixel art reading"
+      "imageUrl": "https://picsum.photos/300/400?random=4",
+      "imageHint": "pixel art character reading book"
     },
     {
       "id": "avatar-showering",
       "description": "Pixel art character in a shower with bubbles.",
-      "imageUrl": "https://backblaze.pixellab.ai/file/pixellab-characters/96b81c43-7069-4815-899c-5fe6dab89911/a175e305-6ebf-4ee4-b812-f54a102e15f3/rotations/south.png",
-      "imageHint": "pixel art character"
+      "imageUrl": "/shower.png",
+      "imageHint": "pixel art character in shower"
     },
     {
       "id": "shop-plushie",
       "description": "A cute pixel art plushie toy.",
-      "imageUrl": "https://picsum.photos/seed/soulsync-plushie/200/200",
+      "imageUrl": "https://picsum.photos/200/200?random=10",
       "imageHint": "pixel art toy"
     },
     {
       "id": "shop-lamp",
       "description": "A cute pixel art lamp.",
-      "imageUrl": "https://picsum.photos/seed/soulsync-lamp/200/200",
+      "imageUrl": "https://picsum.photos/200/200?random=11",
       "imageHint": "pixel art furniture"
     },
     {
       "id": "shop-plant",
       "description": "A cute pixel art potted plant.",
-      "imageUrl": "https://picsum.photos/seed/soulsync-plant/200/200",
+      "imageUrl": "https://picsum.photos/200/200?random=12",
       "imageHint": "pixel art plant"
     },
     {
       "id": "shop-rug",
       "description": "A cute pixel art heart-shaped rug.",
-      "imageUrl": "https://picsum.photos/seed/soulsync-rug/200/200",
+      "imageUrl": "https://picsum.photos/200/200?random=13",
       "imageHint": "pixel art rug"
     },
     {

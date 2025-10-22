@@ -1,7 +1,11 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import Image from 'next/image';
+import { useState, useEffect, useMemo, useCallback, memo } from 'react';
+import { AvatarSkeleton } from '@/components/ui/skeleton';
+import { OptimizedImage } from '@/components/OptimizedImage';
+import { useCriticalImagePreloader } from '@/hooks/use-image-preloader';
+import { usePerformanceMonitor, PerformanceDebugger } from '@/hooks/use-performance-monitor';
+import { NotificationsPopover } from '@/components/NotificationsPopover';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -24,11 +28,26 @@ import {
   serverTimestamp,
   updateDoc,
   onSnapshot,
+  getDocs,
+  query,
+  where,
 } from 'firebase/firestore';
 import Link from 'next/link';
 
 type Kiss = {
-  id: number;
+  id: string;
+};
+
+type AvatarData = {
+  hairStyle: string;
+  faceType: string;
+  clothing: string;
+};
+
+type AvatarAsset = {
+  id: string;
+  name: string;
+  imageUrl: string;
 };
 
 export default function HomePage() {
@@ -40,6 +59,20 @@ export default function HomePage() {
   const [partnerStatus, setPartnerStatus] = useState<Status>(statuses[0]);
   const [kisses, setKisses] = useState<Kiss[]>([]);
   const [schedule, setSchedule] = useState<string>('');
+  const [partnerAvatar, setPartnerAvatar] = useState<AvatarData | null>(null);
+  const [avatarAssets, setAvatarAssets] = useState<{
+    hair: AvatarAsset[];
+    faces: AvatarAsset[];
+    clothes: AvatarAsset[];
+  }>({ hair: [], faces: [], clothes: [] });
+  const [processedNotifications, setProcessedNotifications] = useState<Set<string>>(new Set());
+  const [isLoadingAvatar, setIsLoadingAvatar] = useState(true);
+
+  // Performance monitoring
+  const { metrics, measureRender, measureImageLoad, measureFirestoreQuery } = usePerformanceMonitor('HomePage');
+  
+  // Preload critical images
+  useCriticalImagePreloader(partnerStatus.id, avatarAssets);
 
   const userAccountRef = useMemoFirebase(
     () => (user ? doc(firestore, 'userAccounts', user.uid) : null),
@@ -64,6 +97,43 @@ export default function HomePage() {
     return () => unsub();
   }, [partnerId, firestore]);
 
+  // Load avatar assets
+  useEffect(() => {
+    (async () => {
+      const base = collection(firestore, 'avatarAssets');
+      const [hairSnap, faceSnap, clothesSnap] = await Promise.all([
+        getDocs(query(base, where('type', '==', 'hair'))),
+        getDocs(query(base, where('type', '==', 'faces'))),
+        getDocs(query(base, where('type', '==', 'clothes'))),
+      ]);
+      const hair = hairSnap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+      const faces = faceSnap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+      const clothes = clothesSnap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+
+      setAvatarAssets({ hair, faces, clothes });
+    })();
+  }, [firestore]);
+
+  // Load partner avatar data
+  useEffect(() => {
+    if (!partnerId) {
+      setIsLoadingAvatar(false);
+      return;
+    }
+    setIsLoadingAvatar(true);
+    const avatarRef = doc(firestore, 'avatars', partnerId);
+    const unsub = onSnapshot(avatarRef, (doc) => {
+      if (doc.exists()) {
+        const avatarData = doc.data() as AvatarData;
+        setPartnerAvatar(avatarData);
+      } else {
+        setPartnerAvatar(null);
+      }
+      setIsLoadingAvatar(false);
+    });
+    return () => unsub();
+  }, [partnerId, firestore]);
+
   // Listen to partner's status updates
   useEffect(() => {
     if (!partnerId) return;
@@ -84,34 +154,62 @@ export default function HomePage() {
     return () => unsubscribe();
   }, [partnerId, firestore]);
 
-  // Listen for kisses
+  // Listen for notifications (kisses, hugs, etc.)
   useEffect(() => {
     if (!user) return;
-    const kissesRef = collection(
+    const notificationsRef = collection(
       firestore,
       'users',
       user.uid,
       'notifications'
     );
-    const unsubscribe = onSnapshot(kissesRef, (snapshot) => {
+    const unsubscribe = onSnapshot(notificationsRef, (snapshot) => {
       snapshot.docChanges().forEach((change) => {
         if (change.type === 'added') {
           const data = change.doc.data();
+          const notificationId = change.doc.id;
+          
+          // Check if this notification has already been processed
+          if (processedNotifications.has(notificationId)) {
+            return;
+          }
+          
+          // Mark as processed immediately to prevent duplicates
+          setProcessedNotifications(prev => new Set([...prev, notificationId]));
+          
           if (data.type === 'kiss') {
-            const newKiss = { id: Date.now() };
+            const newKiss = { id: `${Date.now()}-${Math.random()}` };
             setKisses((prev) => [...prev, newKiss]);
             setTimeout(() => {
               setKisses((prev) => prev.filter((k) => k.id !== newKiss.id));
-            }, 1500);
-            // Optionally delete the notification
-            // deleteDoc(change.doc.ref);
+            }, 2000); // Increased duration for better visibility
+            
+            // Mark notification as processed in Firebase
+            updateDoc(change.doc.ref, { 
+              processed: true, 
+              processedAt: serverTimestamp() 
+            }).catch(console.error);
+          }
+          
+          if (data.type === 'hug') {
+            // Add hug animation/effect here if needed
+            toast({
+              title: '🤗 Hug Received!',
+              description: 'Your partner sent you a warm hug!',
+            });
+            
+            // Mark notification as processed in Firebase
+            updateDoc(change.doc.ref, { 
+              processed: true, 
+              processedAt: serverTimestamp() 
+            }).catch(console.error);
           }
         }
       });
     });
 
     return () => unsubscribe();
-  }, [user, firestore]);
+  }, [user, firestore, processedNotifications]);
 
   // Load my schedule
   useEffect(() => {
@@ -123,7 +221,7 @@ export default function HomePage() {
     return () => unsub();
   }, [user, firestore]);
 
-  const handleStatusChange = async (statusId: Status['id']) => {
+  const handleStatusChange = useCallback(async (statusId: Status['id']) => {
     if (!user) return;
     setMyStatusId(statusId);
     const statusRef = doc(firestore, 'statusUpdates', user.uid);
@@ -156,9 +254,9 @@ export default function HomePage() {
         );
       }
     }
-  };
+  }, [user, firestore, toast]);
 
-  const sendKiss = async () => {
+  const sendKiss = useCallback(async () => {
     if (!user || !partnerId) {
       toast({
         variant: 'destructive',
@@ -167,11 +265,16 @@ export default function HomePage() {
       });
       return;
     }
-    const newKiss = { id: Date.now() };
+    
+    // Create unique action ID to prevent duplicates
+    const actionId = `kiss-${Date.now()}-${Math.random()}`;
+    
+    // Show local kiss animation immediately
+    const newKiss = { id: actionId };
     setKisses((prev) => [...prev, newKiss]);
     setTimeout(() => {
       setKisses((prev) => prev.filter((k) => k.id !== newKiss.id));
-    }, 1500);
+    }, 2000);
 
     const partnerNotificationsRef = collection(
       firestore,
@@ -183,13 +286,17 @@ export default function HomePage() {
       type: 'kiss',
       from: user.uid,
       timestamp: serverTimestamp(),
+      description: '💕 Sent you a kiss!',
+      content: '💕 Sent you a kiss!',
+      actionId: actionId,
+      processed: false,
     });
 
     toast({
       title: '💕 Smooch! 💕',
       description: 'You sent a kiss to your partner!',
     });
-  };
+  }, [user, partnerId, firestore, toast]);
 
   const saveSchedule = async () => {
     if (!user) return;
@@ -220,8 +327,13 @@ export default function HomePage() {
       });
       return;
     }
+    
+    // Create unique action ID to prevent duplicates
+    const actionId = `hug-${Date.now()}-${Math.random()}`;
+    
     // local effect
     toast({ title: '🤗 Hugs! 🤗', description: 'You sent a hug to your partner!' });
+    
     // remote notification
     const partnerNotificationsRef = collection(
       firestore,
@@ -233,12 +345,22 @@ export default function HomePage() {
       type: 'hug',
       from: user.uid,
       timestamp: serverTimestamp(),
+      description: '🤗 Sent you a warm hug!',
+      content: '🤗 Sent you a warm hug!',
+      actionId: actionId,
+      processed: false,
     });
   };
 
+  // Helper function to get avatar asset URL
+  const getAvatarAssetUrl = (category: 'hair' | 'faces' | 'clothes', assetId: string) => {
+    const assets = avatarAssets[category];
+    return assets.find(asset => asset.id === assetId)?.imageUrl || '';
+  };
+
   return (
-    <div className="relative flex h-full flex-col bg-accent/30 p-4">
-      <header className="flex items-center justify-between rounded-lg bg-card/80 p-3 shadow-sm backdrop-blur-sm">
+    <div className={`relative flex h-full flex-col bg-accent/30 p-4 ${partnerStatus.id === 'sleeping' ? 'sleeping-theme' : ''}`}>
+      <header className="flex items-center justify-between rounded-lg bg-card/80 p-3 shadow-sm backdrop-blur-sm fade-in">
         <div>
           <p className="text-sm text-muted-foreground">My Status:</p>
           <Select onValueChange={handleStatusChange} defaultValue={myStatusId}>
@@ -262,32 +384,127 @@ export default function HomePage() {
             Is currently {partnerStatus.label}
           </p>
         </div>
+        <NotificationsPopover />
       </header>
 
-      <div className="relative flex-1 flex items-center justify-center my-4">
+      <div className="relative flex-2 flex items-center justify-center my-4">
         {partnerId ? (
           <div className="relative w-[300px] h-[400px]">
-            <Image
-              src={partnerStatus.image.imageUrl}
-              alt={partnerStatus.description}
-              width={300}
-              height={400}
-              className="pixelated object-contain"
-              data-ai-hint={partnerStatus.image.imageHint}
-            />
+            {isLoadingAvatar ? (
+              <AvatarSkeleton />
+            ) : (
+              <>
+                {/* Show status-based placeholder image for sleeping, eating, or showering */}
+            {['sleeping', 'eating', 'showering'].includes(partnerStatus.id) ? (
+              <OptimizedImage
+                src={partnerStatus.image.imageUrl}
+                alt={partnerStatus.description}
+                width={300}
+                height={400}
+                className="pixelated object-contain fade-in"
+                dataAiHint={partnerStatus.image.imageHint}
+                priority
+                quality={90}
+              />
+            ) : partnerAvatar ? (
+              <div className="relative h-full w-full fade-in">
+                            {/* Clothes: bottom layer */}
+                            {getAvatarAssetUrl('clothes', partnerAvatar.clothing) && (
+                              <OptimizedImage
+                                src={getAvatarAssetUrl('clothes', partnerAvatar.clothing)}
+                                alt="Partner clothes"
+                                width={300}
+                                height={400}
+                                className="pixelated object-contain absolute scale-75 top-[150px] left-0 z-10"
+                                dataAiHint="pixel art clothes"
+                                quality={85}
+                              />
+                            )}
+
+                            {/* Face: middle layer */}
+                            {getAvatarAssetUrl('faces', partnerAvatar.faceType) && (
+                              <OptimizedImage
+                                src={getAvatarAssetUrl('faces', partnerAvatar.faceType)}
+                                alt="Partner face"
+                                width={300}
+                                height={400}
+                                className="pixelated object-contain absolute scale-60 top-[-10px] left-0 z-20"
+                                dataAiHint="pixel art faces"
+                                quality={85}
+                              />
+                            )}
+
+                            {/* Hair: top layer */}
+                            {getAvatarAssetUrl('hair', partnerAvatar.hairStyle) && (
+                              <OptimizedImage
+                                src={getAvatarAssetUrl('hair', partnerAvatar.hairStyle)}
+                                alt="Partner hair"
+                                width={300}
+                                height={400}
+                                className="pixelated object-contain absolute scale-60 top-[-10px] left-0 z-30"
+                                dataAiHint="pixel art hair"
+                                quality={85}
+                              />
+                            )}
+              </div>
+            ) : (
+              <OptimizedImage
+                src={partnerStatus.image.imageUrl}
+                alt={partnerStatus.description}
+                width={300}
+                height={400}
+                className="pixelated object-contain fade-in"
+                dataAiHint={partnerStatus.image.imageHint}
+                priority
+                quality={90}
+              />
+            )}
+            
+            {/* Room items overlay */}
             {roomItems.filter(i => i.placed).map((i, idx) => (
-              <div key={i.id} className="absolute" style={{ left: (idx % 3) * 90 + 10, top: Math.floor(idx / 3) * 90 + 260 }}>
-                <Image src={i.imageUrl} alt={i.name} width={64} height={64} className="pixelated" />
+              <div key={i.id} className="absolute slide-in" style={{ left: (idx % 3) * 90 + 10, top: Math.floor(idx / 3) * 90 + 260 }}>
+                <OptimizedImage 
+                  src={i.imageUrl} 
+                  alt={i.name} 
+                  width={64} 
+                  height={64} 
+                  className="pixelated" 
+                  quality={80}
+                />
               </div>
             ))}
+            
+            {/* Kiss animations */}
             {kisses.map((kiss) => (
               <div
                 key={kiss.id}
                 className="absolute inset-0 flex items-center justify-center pointer-events-none"
               >
-                <PixelHeartIcon className="w-16 h-16 text-primary/80 animate-heart-float" />
+                <OptimizedImage
+                  src="/kiss.png"
+                  alt="Kiss"
+                  width={128}
+                  height={128}
+                  className="pixelated animate-kiss-fly z-50"
+                  priority
+                  quality={90}
+                />
               </div>
             ))}
+            
+            {/* Water dripping animation for showering status */}
+            {partnerStatus.id === 'showering' && (
+              <>
+                <div className="water-drip"></div>
+                <div className="water-drip"></div>
+                <div className="water-drip"></div>
+                <div className="water-drip"></div>
+                <div className="water-drip"></div>
+                <div className="water-drip"></div>
+              </>
+            )}
+              </>
+            )}
           </div>
         ) : (
            <div className="text-center">
@@ -300,13 +517,13 @@ export default function HomePage() {
       </div>
 
       {partnerId && (
-        <div className="rounded-lg bg-card/80 p-3 shadow-sm backdrop-blur-sm">
+        <div className="rounded-lg bg-card/80 p-3 shadow-sm backdrop-blur-sm fade-in">
           <p className="text-sm mb-2">My Partner's Room Items</p>
           <div className="grid grid-cols-3 gap-2">
             {roomItems.map((item) => (
-              <div key={item.id} className="flex items-center justify-between rounded border px-2 py-1">
+              <div key={item.id} className="flex items-center justify-between rounded border px-2 py-1 card-hover">
                 <span className="text-xs truncate mr-2">{item.name}</span>
-                <Button size="xs" variant={item.placed ? 'secondary' : 'primary'} onClick={async () => {
+                <Button size="sm" variant={item.placed ? 'secondary' : 'default'} onClick={async () => {
                   const { doc, updateDoc } = await import('firebase/firestore');
                   const ref = doc(firestore, 'users', partnerId, 'roomInventory', item.id);
                   await updateDoc(ref, { placed: !item.placed });
@@ -319,7 +536,7 @@ export default function HomePage() {
         </div>
       )}
 
-      <div className="flex items-center justify-center gap-4 rounded-lg bg-card/80 p-4 shadow-sm backdrop-blur-sm">
+      <div className="flex items-center justify-center gap-4 rounded-lg bg-card/80 p-4 shadow-sm backdrop-blur-sm fade-in">
         <Button
           variant="outline"
           size="lg"
@@ -330,7 +547,7 @@ export default function HomePage() {
           <span className="text-xs">Hug</span>
         </Button>
         <Button
-          variant="primary"
+          variant="secondary"
           size="lg"
           className="h-20 w-20 rounded-full flex-col gap-1 shadow-lg"
           onClick={sendKiss}
@@ -351,13 +568,16 @@ export default function HomePage() {
         </Button>
       </div>
 
-      <div className="mt-3 rounded-lg bg-card/80 p-3 shadow-sm backdrop-blur-sm">
+      <div className="mt-3 rounded-lg bg-card/80 p-3 shadow-sm backdrop-blur-sm fade-in">
         <p className="text-sm mb-2">My Schedule (visible to partner)</p>
         <div className="flex gap-2">
           <input className="flex-1 rounded border px-3 py-2" value={schedule} onChange={(e) => setSchedule(e.target.value)} placeholder="e.g., Study 7-9pm; Gym 9-10pm" />
           <Button onClick={saveSchedule} size="sm">Save</Button>
         </div>
       </div>
+      
+      {/* Performance Debugger - only shows in development */}
+      <PerformanceDebugger componentName="HomePage" metrics={metrics} />
     </div>
   );
 }

@@ -1,15 +1,12 @@
 import type { Metadata } from 'next';
 import { Toaster } from '@/components/ui/toaster';
-import { Poppins } from 'next/font/google';
 import './globals.css';
 import { FirebaseClientProvider } from '@/firebase';
 
 export const metadata: Metadata = {
-  title: 'SoulSync',
+  title: 'Uwe',
   description: 'A cute, fun app for long distance couples.',
 };
-
-const poppins = Poppins({ subsets: ['latin'], weight: ['400','600','700'] });
 
 export default function RootLayout({
   children,
@@ -17,7 +14,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className={poppins.className}>
+    <html lang="en" suppressHydrationWarning>
       <head>
       </head>
       <body className="antialiased">

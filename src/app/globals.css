@@ -2,12 +2,185 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Font fallback */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+}
+
+/* Performance optimizations */
+* {
+  box-sizing: border-box;
+}
+
+/* Smooth transitions for all interactive elements */
+button, input, select, a, [role="button"] {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Optimize image rendering */
+img {
+  image-rendering: optimizeSpeed;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Loading skeleton animations */
+@keyframes shimmer {
+  0% { background-position: -200px 0; }
+  100% { background-position: calc(200px + 100%) 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200px 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.dark .skeleton {
+  background: linear-gradient(90deg, #2a2a2a 25%, #3a3a3a 50%, #2a2a2a 75%);
+  background-size: 200px 100%;
+}
+
+/* Smooth fade transitions */
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* Optimized card hover effects */
+.card-hover {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* Image loading states */
+.image-loading {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200px 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.image-error {
+  background-color: #fee2e2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #dc2626;
+  font-size: 0.875rem;
+}
+
 /* Cute rounded theme tweaks */
 .pixelated { image-rendering: pixelated; }
 .btn-rounded { @apply rounded-2xl; }
 /* Heart float animation used on welcome */
 @keyframes heartFloat { 0% { transform: translateY(0); opacity: .8 } 100% { transform: translateY(-12px); opacity: 0.9 } }
 .animate-heart-float { animation: heartFloat 1.2s ease-in-out infinite alternate; }
+
+/* Kiss flying animation */
+@keyframes kissFly {
+  0% { 
+    transform: translateX(-100px) translateY(50px) scale(0.5); 
+    opacity: 0; 
+  }
+  20% { 
+    opacity: 1; 
+  }
+  80% { 
+    transform: translateX(0) translateY(-20px) scale(1); 
+    opacity: 1; 
+  }
+  100% { 
+    transform: translateX(20px) translateY(-40px) scale(0.8); 
+    opacity: 0; 
+  }
+}
+.animate-kiss-fly { 
+  animation: kissFly 2s ease-out forwards; 
+}
+
+/* Water dripping animation for showering */
+@keyframes waterDrip {
+  0% { 
+    transform: translateY(-20px); 
+    opacity: 0; 
+  }
+  10% { 
+    opacity: 1; 
+  }
+  90% { 
+    opacity: 1; 
+  }
+  100% { 
+    transform: translateY(100px); 
+    opacity: 0; 
+  }
+}
+
+.water-drip {
+  position: absolute;
+  width: 3px;
+  height: 8px;
+  background: linear-gradient(to bottom, #87CEEB, #4682B4);
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  animation: waterDrip 2s linear infinite;
+}
+
+.water-drip:nth-child(1) { left: 20%; animation-delay: 0s; }
+.water-drip:nth-child(2) { left: 40%; animation-delay: 0.3s; }
+.water-drip:nth-child(3) { left: 60%; animation-delay: 0.6s; }
+.water-drip:nth-child(4) { left: 80%; animation-delay: 0.9s; }
+.water-drip:nth-child(5) { left: 30%; animation-delay: 1.2s; }
+.water-drip:nth-child(6) { left: 70%; animation-delay: 1.5s; }
+
+/* Sleeping theme - darker aesthetic */
+.sleeping-theme {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  color: #e0e6ed;
+}
+
+.sleeping-theme .bg-card\/80 {
+  background-color: rgba(26, 26, 46, 0.8);
+  border-color: rgba(224, 230, 237, 0.1);
+}
+
+.sleeping-theme .text-muted-foreground {
+  color: #a0a6ad;
+}
+
+.sleeping-theme .bg-accent\/30 {
+  background-color: rgba(15, 52, 96, 0.3);
+}
 
 body {
   font-family: Arial, Helvetica, sans-serif;
