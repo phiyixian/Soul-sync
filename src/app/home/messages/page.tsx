@@ -19,9 +19,14 @@ import {
   doc,
   addDoc,
   serverTimestamp,
+  updateDoc,
+  deleteDoc,
 } from 'firebase/firestore';
 import { useMemo, useState, useRef, useEffect } from 'react';
 import { useMemoFirebase } from '@/firebase/provider';
+import SnapUpload from '@/components/SnapUpload';
+import SnapDisplay from '@/components/SnapDisplay';
+import { Snap, SnapData } from '@/lib/snap-types';
 
 export default function MessagesPage() {
   const { user } = useUser();
@@ -47,6 +52,30 @@ export default function MessagesPage() {
 
   const { data: messages } = useCollection(messagesQuery);
 
+  // Snap queries
+  const sentSnapsQuery = useMemoFirebase(() => {
+    if (!user || !partnerId) return null;
+    return query(
+      collection(firestore, 'snaps'),
+      where('senderId', '==', user.uid),
+      where('recipientId', '==', partnerId),
+      orderBy('createdAt', 'desc')
+    );
+  }, [firestore, user?.uid, partnerId]);
+
+  const receivedSnapsQuery = useMemoFirebase(() => {
+    if (!user || !partnerId) return null;
+    return query(
+      collection(firestore, 'snaps'),
+      where('senderId', '==', partnerId),
+      where('recipientId', '==', user.uid),
+      orderBy('createdAt', 'desc')
+    );
+  }, [firestore, user?.uid, partnerId]);
+
+  const { data: sentSnaps } = useCollection(sentSnapsQuery);
+  const { data: receivedSnaps } = useCollection(receivedSnapsQuery);
+
   const filteredMessages = useMemo(() => {
     if (!messages || !partnerId) return [];
     return messages.filter(
@@ -57,6 +86,46 @@ export default function MessagesPage() {
           msg.recipientAccountId === user?.uid)
     );
   }, [messages, user?.uid, partnerId]);
+
+  const allSnaps = useMemo(() => {
+    const snaps: Snap[] = [];
+    
+    // Only show received snaps (not sent snaps)
+    if (receivedSnaps) {
+      receivedSnaps.forEach((snap) => {
+        const snapData = snap as SnapData;
+        snaps.push({
+          id: snap.id,
+          senderId: snapData.senderId,
+          recipientId: snapData.recipientId,
+          imageUrl: snapData.imageUrl,
+          createdAt: snapData.createdAt?.toDate() || new Date(),
+          expiresAt: snapData.expiresAt?.toDate() || new Date(),
+          isOpened: snapData.isOpened,
+          openedAt: snapData.openedAt?.toDate(),
+          viewDuration: snapData.viewDuration,
+        });
+      });
+    }
+    
+    return snaps.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }, [receivedSnaps]);
+
+  const handleSnapOpened = async (snapId: string) => {
+    if (!firestore) return;
+    
+    console.log('handleSnapOpened called for:', snapId);
+    
+    try {
+      // Delete the snap immediately when viewing is complete
+      await deleteDoc(doc(firestore, 'snaps', snapId));
+      console.log('Snap deleted successfully:', snapId);
+      
+    } catch (error) {
+      console.error('Error deleting snap:', error);
+      // Don't throw error - just log it
+    }
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -108,6 +177,20 @@ export default function MessagesPage() {
 
   return (
     <div className="flex h-full flex-col p-4">
+      {/* Snap Upload */}
+      <SnapUpload 
+        partnerId={partnerId} 
+        onSnapSent={() => {
+          // Refresh snaps or handle snap sent
+        }} 
+      />
+      
+      {/* Snap Display */}
+      <SnapDisplay 
+        snaps={allSnaps} 
+        onSnapOpened={handleSnapOpened} 
+      />
+      
       <Card className="flex flex-1 flex-col">
         <CardHeader>
           <CardTitle>Messages with your love</CardTitle>

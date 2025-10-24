@@ -13,15 +13,19 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Logo } from '@/components/icons/Logo';
 import { useState } from 'react';
-import { useAuth } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
 import { initiateEmailSignIn } from '@/firebase/non-blocking-login';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
+import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
+import { Chrome } from 'lucide-react';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const auth = useAuth();
+  const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -41,6 +45,118 @@ export default function LoginPage() {
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    if (!auth || !firestore) return;
+
+    try {
+      const provider = new GoogleAuthProvider();
+      provider.addScope('https://www.googleapis.com/auth/calendar.readonly');
+      provider.addScope('https://www.googleapis.com/auth/userinfo.email');
+      provider.addScope('https://www.googleapis.com/auth/userinfo.profile');
+      
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      
+      // Get the access token from the credential
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      const accessToken = credential?.accessToken;
+
+      console.log('Google Sign-In result:', {
+        user: user.uid,
+        credential: !!credential,
+        accessToken: !!accessToken,
+        accessTokenLength: accessToken?.length
+      });
+
+      if (accessToken) {
+        // Store calendar configuration in user's account
+        const userAccountRef = doc(firestore, 'userAccounts', user.uid);
+        
+        // First, check if the user document exists
+        try {
+          const userDoc = await getDoc(userAccountRef);
+          
+          if (userDoc.exists()) {
+            // User exists, update calendar config
+            console.log('User document exists, updating calendar config');
+            await updateDoc(userAccountRef, {
+              calendarConfig: {
+                enabled: true,
+                syncEnabled: true,
+                shareWithPartner: true,
+                accessToken: accessToken,
+              }
+            });
+          } else {
+            // User doesn't exist, create the document
+            console.log('User document does not exist, creating it');
+            const userAccountData = {
+              id: user.uid,
+              username: user.displayName || user.email?.split('@')[0] || 'user',
+              email: user.email,
+              dateJoined: new Date().toISOString(),
+              partnerAccountId: null,
+              credits: 500,
+              profile: { gender: 'other', partnerPreference: 'other' },
+              calendarConfig: {
+                enabled: true,
+                syncEnabled: true,
+                shareWithPartner: true,
+                accessToken: accessToken,
+              },
+            };
+            
+            await setDoc(userAccountRef, userAccountData);
+            console.log('User document created with calendar config');
+          }
+        } catch (error) {
+          console.error('Error handling user document:', error);
+          // Fallback: try to create the document
+          try {
+            const userAccountData = {
+              id: user.uid,
+              username: user.displayName || user.email?.split('@')[0] || 'user',
+              email: user.email,
+              dateJoined: new Date().toISOString(),
+              partnerAccountId: null,
+              credits: 500,
+              profile: { gender: 'other', partnerPreference: 'other' },
+              calendarConfig: {
+                enabled: true,
+                syncEnabled: true,
+                shareWithPartner: true,
+                accessToken: accessToken,
+              },
+            };
+            
+            await setDoc(userAccountRef, userAccountData);
+            console.log('User document created as fallback');
+          } catch (fallbackError) {
+            console.error('Fallback creation failed:', fallbackError);
+          }
+        }
+        
+        console.log('Google Calendar access granted and stored');
+      } else {
+        console.error('No access token received from Google Sign-In');
+      }
+      
+      toast({
+        title: 'Welcome!',
+        description: `Signed in as ${user.displayName || user.email}`,
+      });
+      
+      router.push('/home');
+    } catch (error: any) {
+      console.error('Google Sign-In error:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Google Sign-In Failed',
+        description: error.message,
+      });
+    }
+  };
+
   return (
     <>
       <Link href="/welcome" className="mb-8 flex justify-center">
@@ -50,11 +166,32 @@ export default function LoginPage() {
         <CardHeader className="space-y-1 text-center">
           <CardTitle className="text-2xl font-bold">Welcome Back!</CardTitle>
           <CardDescription>
-            Enter your email to sign in to your account
+            Sign in to your account to continue
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form className="space-y-4" onSubmit={handleSignIn}>
+          {/* Google Sign-In Button */}
+          <Button
+            onClick={handleGoogleSignIn}
+            variant="outline"
+            className="w-full mb-4 cute-button"
+          >
+            <Chrome className="mr-2 h-4 w-4 text-blue-500" />
+            Continue with Google
+          </Button>
+          
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">
+                Or continue with email
+              </span>
+            </div>
+          </div>
+
+          <form className="space-y-4 mt-4" onSubmit={handleSignIn}>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -64,6 +201,7 @@ export default function LoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                className="cute-input"
               />
             </div>
             <div className="space-y-2">
@@ -74,9 +212,10 @@ export default function LoginPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                className="cute-input"
               />
             </div>
-            <Button type="submit" className="w-full">
+            <Button type="submit" className="w-full cute-button">
               Sign In
             </Button>
           </form>

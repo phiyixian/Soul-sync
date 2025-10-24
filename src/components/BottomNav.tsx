@@ -17,7 +17,7 @@ export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="sticky bottom-0 mt-auto w-full border-t bg-card">
+    <nav className="sticky bottom-0 mt-auto w-full border-t bg-card/80 backdrop-blur-sm">
       <div className="mx-auto grid grid-cols-5 h-16 max-w-md items-center justify-around px-2">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
@@ -26,8 +26,8 @@ export function BottomNav() {
               key={item.label}
               href={item.href}
               className={cn(
-                'flex flex-col items-center justify-center gap-1 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground relative',
-                isActive && 'text-primary'
+                'flex flex-col items-center justify-center gap-1 rounded-xl p-2 text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-accent-foreground relative cute-button',
+                isActive && 'text-primary bg-accent/20'
               )}
             >
               <item.icon className="h-6 w-6" />

@@ -10,9 +10,10 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        body: ['"PT Sans"', 'sans-serif'],
-        headline: ['"PT Sans"', 'sans-serif'],
-        code: ['monospace'],
+        sans: ['Poppins', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        body: ['Poppins', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        headline: ['Poppins', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        code: ['ui-monospace', 'SFMono-Regular', 'monospace'],
       },
       colors: {
         background: 'hsl(var(--background))',
@@ -70,6 +71,13 @@ export default {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 4px)',
         sm: 'calc(var(--radius) - 8px)',
+        '2xl': '1.5rem',
+        '3xl': '2rem',
+      },
+      zIndex: {
+        '11': '11',
+        '12': '12',
+        '13': '13',
       },
       keyframes: {
         'accordion-down': {

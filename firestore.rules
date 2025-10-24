@@ -363,6 +363,26 @@
  match /creditTransactions/{transactionId} {
   allow read, write: if isSignedIn();
  }
+
+ // Snaps - Temporary permissive rules for testing
+ match /snaps/{snapId} {
+  allow read, write: if isSignedIn();
+ }
+
+ // Partner Calendars - Temporary permissive rules for testing
+ match /partnerCalendars/{partnerId} {
+  allow read, write: if isSignedIn();
+ }
+
+ // Kisses - Temporary permissive rules for testing
+ match /kisses/{kissId} {
+  allow read, write: if isSignedIn();
+ }
+
+ // User Locations - Temporary permissive rules for testing
+ match /userLocations/{userId} {
+  allow read, write: if isSignedIn();
+ }
  
 
   /**

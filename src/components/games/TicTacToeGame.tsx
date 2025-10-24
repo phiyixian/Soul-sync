@@ -13,7 +13,10 @@ import {
   addDoc,
   collection,
   serverTimestamp,
-  deleteDoc
+  deleteDoc,
+  query,
+  where,
+  getDocs
 } from 'firebase/firestore';
 import { GameSession, PlayerRole, TicTacToeGameData } from '@/lib/game-types';
 import { X, Circle, Trophy, Clock } from 'lucide-react';
@@ -30,10 +33,23 @@ export default function TicTacToeGame({ gameId }: TicTacToeGameProps) {
   const [game, setGame] = useState<GameSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [makingMove, setMakingMove] = useState(false);
+  const [lastUpdateTime, setLastUpdateTime] = useState<Date | null>(null);
+  const [redirectCountdown, setRedirectCountdown] = useState<number | null>(null);
 
   // Delete completed game session after a delay
   const deleteCompletedGame = async (gameId: string) => {
     try {
+      // Mark the game invite as completed first
+      const invitesRef = collection(firestore, 'gameInvites');
+      const invitesQuery = query(invitesRef, where('gameId', '==', gameId));
+      const invitesSnapshot = await getDocs(invitesQuery);
+      
+      invitesSnapshot.forEach(async (doc) => {
+        await updateDoc(doc.ref, {
+          status: 'completed'
+        });
+      });
+
       // Wait 10 seconds to allow players to see the result
       setTimeout(async () => {
         await deleteDoc(doc(firestore, 'gameSessions', gameId));
@@ -49,27 +65,102 @@ export default function TicTacToeGame({ gameId }: TicTacToeGameProps) {
     if (!gameId || !firestore) return;
 
     const gameRef = doc(firestore, 'gameSessions', gameId);
-    const unsubscribe = onSnapshot(gameRef, (doc) => {
+    const unsubscribe = onSnapshot(gameRef, async (doc) => {
       if (doc.exists()) {
         const data = doc.data();
-        setGame({
+        const gameData = {
           id: doc.id,
           ...data,
           createdAt: data.createdAt?.toDate() || new Date(),
           completedAt: data.completedAt?.toDate(),
-        } as GameSession);
+        } as GameSession;
+        
+        // Check if this is a new move from the other player
+        const currentGameData = gameData.gameData as TicTacToeGameData;
+        const currentMoves = currentGameData?.moves || [];
+        const isPlayer1 = gameData.player1Id === user?.uid;
+        const isPlayer2 = gameData.player2Id === user?.uid;
+        const currentPlayerRole = isPlayer1 ? 'player1' : isPlayer2 ? 'player2' : null;
+        
+        // If there are moves and it's not the current user's turn, show a notification
+        if (Array.isArray(currentMoves) && currentMoves.length > 0 && gameData.currentPlayer !== currentPlayerRole && game) {
+          const lastMove = currentMoves[currentMoves.length - 1];
+          if (lastMove && typeof lastMove === 'object' && lastMove.player !== currentPlayerRole) {
+            toast({
+              title: 'Move received!',
+              description: 'Your partner made a move. It\'s your turn!',
+              duration: 2000,
+            });
+          }
+        }
+        
+        // Check if game is completed and handle redirect for both players
+        if (gameData.status === 'completed' && redirectCountdown === null) {
+          const winner = gameData.winner;
+          const isDraw = !winner;
+          
+          if (winner || isDraw) {
+            // Show completion message
+            toast({
+              title: winner ? '🎉 Game Over!' : '🤝 Draw!',
+              description: winner 
+                ? `${winner === 'player1' ? 'Player 1' : 'Player 2'} wins!`
+                : 'The game ended in a tie!',
+            });
+            
+            // Start redirect countdown for both players
+            setRedirectCountdown(3);
+            const countdownInterval = setInterval(() => {
+              setRedirectCountdown(prev => {
+                if (prev === null || prev <= 1) {
+                  clearInterval(countdownInterval);
+                  window.location.href = '/home/games';
+                  return null;
+                }
+                return prev - 1;
+              });
+            }, 1000);
+          }
+        }
+        
+        setGame(gameData);
+        setLastUpdateTime(new Date());
+        
+        // Auto-transition from waiting to active when both players are present
+        if (gameData.status === 'waiting' && gameData.player1Id && gameData.player2Id) {
+          try {
+            await updateDoc(gameRef, {
+              status: 'active'
+            });
+            console.log('Game transitioned from waiting to active');
+          } catch (error) {
+            console.error('Error transitioning game to active:', error);
+          }
+        }
       }
       setLoading(false);
     });
 
-    // Cleanup on component unmount - if game is still active, mark as abandoned
+    // Cleanup on component unmount - only mark as cancelled if game was abandoned
     return () => {
       unsubscribe();
-      if (game && game.status === 'active') {
-        // Mark game as abandoned if user leaves during active game
+      // Only mark as cancelled if the game was actually abandoned (not just navigating away)
+      // We'll use a different approach - mark as cancelled only if game is still waiting
+      if (game && game.status === 'waiting') {
         updateDoc(gameRef, {
           status: 'cancelled',
-          completedAt: serverTimestamp()
+          completedAt: new Date()
+        }).catch(console.error);
+        
+        // Also mark the game invite as cancelled
+        const invitesRef = collection(firestore, 'gameInvites');
+        const invitesQuery = query(invitesRef, where('gameId', '==', gameId));
+        getDocs(invitesQuery).then(snapshot => {
+          snapshot.forEach(doc => {
+            updateDoc(doc.ref, {
+              status: 'cancelled'
+            }).catch(console.error);
+          });
         }).catch(console.error);
       }
     };
@@ -80,7 +171,7 @@ export default function TicTacToeGame({ gameId }: TicTacToeGameProps) {
     
     const gameData = game.gameData as TicTacToeGameData;
     const currentBoard = gameData?.board || Array(9).fill(null);
-    const currentMoves = gameData?.moves || [];
+    const currentMoves = Array.isArray(gameData?.moves) ? gameData.moves : [];
     
     // Check if it's the current player's turn
     const isPlayer1 = game.player1Id === user.uid;
@@ -113,14 +204,18 @@ export default function TicTacToeGame({ gameId }: TicTacToeGameProps) {
       newBoard[position] = currentPlayerRole === 'player1' ? 'X' : 'O';
       
       const newMove = {
-        player: currentPlayerRole,
+        player: currentPlayerRole as PlayerRole,
         position,
         timestamp: new Date()
       };
       
       const updatedGameData: TicTacToeGameData = {
         board: newBoard,
-        moves: [...currentMoves, newMove]
+        moves: [...currentMoves, newMove],
+        playerStats: gameData.playerStats || {
+          player1: { moves: 0, wins: 0 },
+          player2: { moves: 0, wins: 0 }
+        }
       };
 
       // Check for win condition
@@ -129,13 +224,19 @@ export default function TicTacToeGame({ gameId }: TicTacToeGameProps) {
       
       const nextPlayer = game.currentPlayer === 'player1' ? 'player2' : 'player1';
       
-      await updateDoc(doc(firestore, 'gameSessions', gameId), {
+      const updateData: any = {
         gameData: updatedGameData,
         currentPlayer: winner || isDraw ? game.currentPlayer : nextPlayer,
         status: winner || isDraw ? 'completed' : 'active',
         winner: winner,
-        completedAt: winner || isDraw ? serverTimestamp() : undefined,
-      });
+      };
+      
+      // Only add completedAt if the game is actually completed
+      if (winner || isDraw) {
+        updateData.completedAt = new Date();
+      }
+      
+      await updateDoc(doc(firestore, 'gameSessions', gameId), updateData);
 
       if (winner) {
         toast({
@@ -159,6 +260,19 @@ export default function TicTacToeGame({ gameId }: TicTacToeGameProps) {
         
         // Schedule game session deletion
         deleteCompletedGame(gameId);
+        
+        // Auto-redirect to games page after 3 seconds
+        setRedirectCountdown(3);
+        const countdownInterval = setInterval(() => {
+          setRedirectCountdown(prev => {
+            if (prev === null || prev <= 1) {
+              clearInterval(countdownInterval);
+              window.location.href = '/home/games';
+              return null;
+            }
+            return prev - 1;
+          });
+        }, 1000);
       }
 
     } catch (error) {
@@ -189,7 +303,7 @@ export default function TicTacToeGame({ gameId }: TicTacToeGameProps) {
       // Update user credits
       const userRef = doc(firestore, 'userAccounts', user.uid);
       await updateDoc(userRef, {
-        credits: serverTimestamp() // This should be incremented, but for now just log
+        credits: credits // Award the earned credits
       });
 
       // Log the reward
@@ -198,7 +312,7 @@ export default function TicTacToeGame({ gameId }: TicTacToeGameProps) {
         amount: credits,
         reason: `Game ${result === playerRole ? 'win' : result === 'draw' ? 'draw' : 'participation'}`,
         gameId: gameId,
-        timestamp: serverTimestamp(),
+        timestamp: new Date(),
       });
 
       toast({
@@ -254,6 +368,24 @@ export default function TicTacToeGame({ gameId }: TicTacToeGameProps) {
     );
   }
 
+  // Show waiting state
+  if (game.status === 'waiting') {
+    return (
+      <div className="p-4">
+        <div className="text-center py-8">
+          <div className="text-lg font-semibold mb-2">Waiting for Players...</div>
+          <div className="text-muted-foreground mb-4">
+            Both players need to join before the game can start.
+          </div>
+          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+            <span>Connecting players...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const gameData = game.gameData as TicTacToeGameData;
   const isPlayer1 = game.player1Id === user?.uid;
   const isPlayer2 = game.player2Id === user?.uid;
@@ -261,7 +393,7 @@ export default function TicTacToeGame({ gameId }: TicTacToeGameProps) {
 
   // Initialize game data if it doesn't exist
   const board = gameData?.board || Array(9).fill(null);
-  const moves = gameData?.moves || [];
+  const moves = Array.isArray(gameData?.moves) ? gameData.moves : [];
 
   return (
     <div className="p-4 space-y-4">
@@ -271,12 +403,24 @@ export default function TicTacToeGame({ gameId }: TicTacToeGameProps) {
           <Badge variant={game.status === 'active' ? 'default' : 'secondary'}>
             {game.status}
           </Badge>
-          {game.status === 'active' && (
+          {redirectCountdown !== null && (
+            <div className="flex items-center gap-2 text-sm text-orange-600">
+              <Clock className="h-4 w-4" />
+              <span>Redirecting in {redirectCountdown}s...</span>
+            </div>
+          )}
+          {game.status === 'active' && redirectCountdown === null && (
             <div className="flex items-center gap-2 text-sm">
               <Clock className="h-4 w-4" />
               <span>
                 {game.currentPlayer === currentPlayerRole ? 'Your turn' : 'Partner\'s turn'}
               </span>
+              {lastUpdateTime && (
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                  <span>Live</span>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -285,7 +429,15 @@ export default function TicTacToeGame({ gameId }: TicTacToeGameProps) {
       {/* Game Board */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-center">Game Board</CardTitle>
+          <CardTitle className="text-center flex items-center justify-center gap-2">
+            Game Board
+            {makingMove && (
+              <div className="flex items-center gap-1 text-xs text-blue-600">
+                <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
+                <span>Processing move...</span>
+              </div>
+            )}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-3 gap-2 max-w-xs mx-auto">

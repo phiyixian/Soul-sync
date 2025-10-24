@@ -4,6 +4,7 @@ import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore, doc, setDoc } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 
 // IMPORTANT: DO NOT MODIFY THIS FUNCTION
 export function initializeFirebase() {
@@ -36,10 +37,24 @@ export function initializeFirebase() {
 }
 
 export function getSdks(firebaseApp: FirebaseApp) {
+  const auth = getAuth(firebaseApp);
+  const firestore = getFirestore(firebaseApp);
+  
+  // Try to initialize storage, but don't fail if it's not available
+  let storage = null;
+  try {
+    storage = getStorage(firebaseApp);
+    console.log('Firebase Storage initialized successfully');
+  } catch (error) {
+    console.warn('Firebase Storage not available:', error);
+    // Storage is not available, but we can still provide other services
+  }
+  
   return {
     firebaseApp,
-    auth: getAuth(firebaseApp),
-    firestore: getFirestore(firebaseApp),
+    auth,
+    firestore,
+    storage,
   };
 }
 

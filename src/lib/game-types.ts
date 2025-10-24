@@ -30,9 +30,44 @@ export interface GameSession {
   completedAt?: Date;
 }
 
+export interface MemoryGameData {
+  cards: MemoryCard[];
+  flippedCards: number[];
+  moves: number;
+  matches: number;
+  currentPlayer: PlayerRole;
+  playerStats: {
+    player1: { moves: number; matches: number };
+    player2: { moves: number; matches: number };
+  };
+}
+
+export interface MemoryCard {
+  id: number;
+  value: string;
+  isFlipped: boolean;
+  isMatched: boolean;
+}
+
 export interface TicTacToeGameData {
   board: (string | null)[];
   moves: Array<{player: PlayerRole, position: number, timestamp: Date}>;
+  playerStats: {
+    player1: { moves: number; wins: number };
+    player2: { moves: number; wins: number };
+  };
+}
+
+export interface WordGuessGameData {
+  word: string;
+  guessedLetters: string[];
+  wrongGuesses: number;
+  currentPlayer: PlayerRole;
+  gameState: 'playing' | 'won' | 'lost';
+  playerStats: {
+    player1: { guesses: number; wins: number };
+    player2: { guesses: number; wins: number };
+  };
 }
 
 export interface GameMove {

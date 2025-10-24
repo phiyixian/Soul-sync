@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Toaster } from '@/components/ui/toaster';
+import { GlobalBackground } from '@/components/GlobalBackground';
 import './globals.css';
 import { FirebaseClientProvider } from '@/firebase';
 
@@ -19,6 +20,7 @@ export default function RootLayout({
       </head>
       <body className="antialiased">
         <FirebaseClientProvider>
+          <GlobalBackground />
           {children}
           <Toaster />
         </FirebaseClientProvider>

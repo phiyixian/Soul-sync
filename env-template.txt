@@ -1,0 +1,29 @@
+# Environment Variables for SoulSync Google Calendar Integration
+# Copy this file to .env.local and fill in your actual values
+
+# Google OAuth Client ID (from Google Cloud Console)
+# Get this from: APIs & Services > Credentials > OAuth 2.0 Client IDs
+NEXT_PUBLIC_GOOGLE_CLIENT_ID=your_oauth_client_id_here
+
+# Google OAuth Client Secret (from Google Cloud Console)
+# Keep this secret - never commit to version control
+GOOGLE_CLIENT_SECRET=your_oauth_client_secret_here
+
+# Google Maps API Key (from Google Cloud Console)
+# Get this from: APIs & Services > Credentials > API Keys
+# Make sure to enable: Maps JavaScript API, Places API, Geocoding API
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_google_maps_api_key_here
+
+# Firebase Configuration (already set in config.ts)
+# These are public and safe to expose
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=studio-8158823289-aa6bd
+NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyABsSOezOOrYn6Mtf0TCPoDIiZnWlUexYQ
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=studio-8158823289-aa6bd.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=studio-8158823289-aa6bd.firebasestorage.app
+
+# Development URLs
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXT_PUBLIC_DEV_URL=http://localhost:9003
+
+# Production URLs (update when deploying)
+NEXT_PUBLIC_PROD_URL=https://your-domain.com
