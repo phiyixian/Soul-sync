@@ -132,6 +132,29 @@ html {
   animation: kissFly 2s ease-out forwards; 
 }
 
+/* Hug animation */
+@keyframes hugFade {
+  0% { 
+    transform: scale(0.5); 
+    opacity: 0; 
+  }
+  20% { 
+    transform: scale(1); 
+    opacity: 1; 
+  }
+  80% { 
+    transform: scale(1); 
+    opacity: 1; 
+  }
+  100% { 
+    transform: scale(0.8); 
+    opacity: 0; 
+  }
+}
+.animate-hug-fade { 
+  animation: hugFade 2s ease-out forwards; 
+}
+
 /* Pat head animation */
 @keyframes patHead {
   0% { 

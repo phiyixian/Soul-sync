@@ -82,8 +82,8 @@ export const QuoteOfTheDay: React.FC = () => {
 
       {/* Quote Modal */}
       {isOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-md bg-gradient-to-br from-pink-50 to-purple-50 border-pink-200 shadow-2xl animate-in fade-in zoom-in duration-300 mx-auto">
+        <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-sm bg-gradient-to-br from-pink-50 to-purple-50 border-pink-200 shadow-2xl animate-in fade-in zoom-in duration-300 mx-auto">
             <CardContent className="p-6 text-center">
               {/* Close Button */}
               <Button

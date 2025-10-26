@@ -67,8 +67,8 @@ export function GiftNotification() {
   if (!gift) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <Card className="w-[380px] bg-card/90 backdrop-blur-sm">
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50">
+      <Card className="w-[320px] bg-card/90 backdrop-blur-sm">
         <CardHeader className="items-center text-center">
           <Gift className="h-12 w-12 text-primary" />
           <CardTitle>You received a gift!</CardTitle>

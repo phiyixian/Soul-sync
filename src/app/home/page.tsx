@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { AvatarSkeleton } from '@/components/ui/skeleton';
 import { OptimizedImage } from '@/components/OptimizedImage';
 import { useCriticalImagePreloader } from '@/hooks/use-image-preloader';
-import { usePerformanceMonitor, PerformanceDebugger } from '@/hooks/use-performance-monitor';
+import { usePerformanceMonitor } from '@/hooks/use-performance-monitor';
 import { NotificationsPopover } from '@/components/NotificationsPopover';
 import { AvatarBackground } from '@/components/AvatarBackground';
 import { GoogleMapsIntegration } from '@/components/GoogleMapsIntegration';
@@ -66,6 +66,7 @@ export default function HomePage() {
   const [partnerStatus, setPartnerStatus] = useState<Status>(statuses[0]);
   const [partnerName, setPartnerName] = useState<string | null>(null);
   const [kisses, setKisses] = useState<Kiss[]>([]);
+  const [hugs, setHugs] = useState<Kiss[]>([]);
   const [partnerAvatar, setPartnerAvatar] = useState<AvatarData | null>(null);
   const [statusTimer, setStatusTimer] = useState<number | null>(null);
   const [customTimerHours, setCustomTimerHours] = useState<number>(0);
@@ -276,7 +277,7 @@ export default function HomePage() {
 
     const interval = setInterval(() => {
       setStatusTimer(prev => {
-        if (prev === null || prev <= 1) {
+        if (prev === null || prev <= 0) {
           return null;
         }
         return prev - 1;
@@ -372,7 +373,7 @@ export default function HomePage() {
       userAccountId: user.uid,
       statusType: statusId,
       timestamp: serverTimestamp(),
-      expiresAt: expiresAt ? serverTimestamp() : null,
+      expiresAt: expiresAt,
       timerDuration: timerDuration
     };
     
@@ -415,6 +416,14 @@ export default function HomePage() {
       console.log('🔄 Timer preset selected but status is active - user must manually apply');
     }
   }, [myStatusId]);
+
+  // Auto-revert status when timer reaches 0
+  useEffect(() => {
+    if (statusTimer === 0 && myStatusId && myStatusId !== 'idle') {
+      console.log('⏰ Timer reached 0, auto-reverting to idle');
+      handleStatusChange('idle');
+    }
+  }, [statusTimer, myStatusId, handleStatusChange]);
 
   const sendKiss = useCallback(async () => {
     if (!user || !partnerId) {
@@ -472,6 +481,13 @@ export default function HomePage() {
     
     // Create unique action ID to prevent duplicates
     const actionId = `hug-${Date.now()}-${Math.random()}`;
+    
+    // Show local hug animation immediately
+    const newHug = { id: actionId };
+    setHugs((prev) => [...prev, newHug]);
+    setTimeout(() => {
+      setHugs((prev) => prev.filter((h) => h.id !== newHug.id));
+    }, 2000);
     
     // local effect
     toast({ 
@@ -764,14 +780,32 @@ export default function HomePage() {
             {kisses.map((kiss) => (
               <div
                 key={kiss.id}
-                className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                className="absolute inset-0 flex items-center justify-center pointer-events-none z-50"
               >
                 <OptimizedImage
                   src="/kiss.png"
                   alt="Kiss"
                   width={128}
                   height={128}
-                  className="pixelated animate-kiss-fly z-50"
+                  className="pixelated animate-kiss-fly"
+                  priority
+                  quality={90}
+                />
+              </div>
+            ))}
+
+            {/* Hug animations */}
+            {hugs.map((hug) => (
+              <div
+                key={hug.id}
+                className="absolute inset-0 flex items-center justify-center pointer-events-none z-50"
+              >
+                <OptimizedImage
+                  src="/hug.png"
+                  alt="Hug"
+                  width={128}
+                  height={128}
+                  className="pixelated animate-hug-fade"
                   priority
                   quality={90}
                 />
@@ -888,9 +922,6 @@ export default function HomePage() {
       <div className="mt-3">
         <GoogleMapsIntegration partnerId={partnerId} partnerName={partnerName || undefined} />
       </div>
-      
-      {/* Performance Debugger - only shows in development */}
-      <PerformanceDebugger componentName="HomePage" metrics={metrics} />
     </div>
   );
 }

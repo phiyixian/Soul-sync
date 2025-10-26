@@ -112,8 +112,8 @@ export default function SnapViewer({ snap, onSnapOpened, onClose }: SnapViewerPr
   const progressPercentage = (timeRemaining / SNAP_VIEW_DURATION) * 100;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-      <Card className="w-full max-w-md mx-4 bg-gradient-to-br from-pink-100 to-purple-100 border-2 border-pink-300">
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+      <Card className="w-full max-w-sm mx-4 bg-gradient-to-br from-pink-100 to-purple-100 border-2 border-pink-300">
         <CardContent className="p-0">
           <div className="relative">
             {/* Progress bar */}

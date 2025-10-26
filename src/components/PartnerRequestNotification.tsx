@@ -118,8 +118,8 @@ export function PartnerRequestNotification() {
   // We'll just show the first pending request for simplicity
   const firstRequest = requests[0];
   return (
-    <div className="fixed inset-x-0 top-4 z-50 flex justify-center">
-      <Card className="w-[380px] bg-card/90 backdrop-blur-sm">
+    <div className="absolute inset-x-0 top-4 z-50 flex justify-center">
+      <Card className="w-[320px] bg-card/90 backdrop-blur-sm">
         <CardHeader>
           <CardTitle>Partner Request</CardTitle>
           <CardDescription>
